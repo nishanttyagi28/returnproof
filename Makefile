@@ -21,4 +21,7 @@ seed:
 	python -m returnproof.seed
 
 demo:
-	python -m returnproof.demo
+	python -m returnproof.demo --reset
+
+api-key:
+	python -m returnproof.apikey_cli --email owner@nirvaanretail.example --name local-dev

@@ -8,6 +8,7 @@ switch ($Task) {
     "check"   { ruff check returnproof tests; mypy returnproof; pytest }
     "run"     { uvicorn returnproof.app:app --reload --port 8000 }
     "seed"    { python -m returnproof.seed }
-    "demo"    { python -m returnproof.demo }
+    "demo"    { python -m returnproof.demo --reset }
+    "api-key" { python -m returnproof.apikey_cli --email owner@nirvaanretail.example --name local-dev }
     default   { Write-Host "Unknown task: $Task" }
 }

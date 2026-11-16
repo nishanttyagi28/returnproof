@@ -13,5 +13,15 @@ and `pytest` pass locally.
 | R-006 | Claim/dispute pack builder | done | 5b1fa93 | 38 |
 | R-007 | Settlement import + recovery ledger | done | 9af12ca | 44 |
 | R-008 | Web UI | done | 8e74986 | 47 |
-| R-009 | Ops: audit, export, jobs, limits, logging | done | _pending_ | 56 |
-| R-010 | Docs, demo, coverage gate | pending | — | — |
+| R-009 | Ops: audit, export, jobs, limits, logging | done | 5e1e986 | 56 |
+| R-010 | Docs, demo, coverage gate | done | _pending_ | 57 |
+
+## Final verification
+
+- `ruff check returnproof tests` — clean
+- `mypy returnproof` — clean (strict)
+- `pytest --cov --cov-fail-under=85` — 57 passed, 87.33% total coverage
+- CI matrix: Ubuntu + Windows, Python 3.12, coverage gate 85
+- Demo verified locally: sample seed, 8 evidence files, 4 verifications, HTML+PDF claim pack, API-key CLI
+
+No milestone is blocked. All work stayed inside `C:/Users/Admin/projects/returnproof`.
