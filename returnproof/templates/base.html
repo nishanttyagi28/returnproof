@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ settings.app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">Return<span>Proof</span></a>
+    <nav aria-label="Primary">
+      <a href="/docs">API docs</a>
+      <a href="/healthz">Health</a>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>ReturnProof v{{ version }} · Synthetic sample data only · Times shown in IST</p>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

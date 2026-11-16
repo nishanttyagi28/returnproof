@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}ReturnProof — returns evidence and recovery{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">Returns operations for Indian e-commerce sellers</p>
+  <h1>Prove what you shipped. Recover what you are owed.</h1>
+  <p class="lede">
+    ReturnProof records tamper-evident dispatch and return-receipt evidence,
+    verifies product identity, builds marketplace-ready claim packs, and tracks
+    every rupee recovered.
+  </p>
+  <div class="actions">
+    <a class="button" href="/docs">Explore the API</a>
+    <a class="button secondary" href="/healthz">Service health</a>
+  </div>
+</section>
+<section class="grid">
+  <article class="card">
+    <h2>Evidence vault</h2>
+    <p>SHA-256 hashed photos, videos and documents with an append-only hash chain per order.</p>
+  </article>
+  <article class="card">
+    <h2>Identity verification</h2>
+    <p>Serial, barcode and perceptual-hash comparisons flag swapped or missing units.</p>
+  </article>
+  <article class="card">
+    <h2>Recovery ledger</h2>
+    <p>Settlement reconciliation surfaces leakage and tracks claims from draft to payout.</p>
+  </article>
+</section>
+{% endblock %}
