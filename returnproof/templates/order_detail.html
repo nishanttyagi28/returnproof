@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ order.order_number }} · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow"><a href="/app/orders">Orders</a> / {{ order.marketplace.name }}</p>
+    <h1>{{ order.order_number }}</h1>
+    <p class="muted">{{ order.customer_name }} · {{ order.customer_pincode }} · {{ order.customer_state }}</p>
+  </div>
+  <span class="pill">{{ order.status | humanize }}</span>
+</div>
+
+<section class="two-col">
+  <div class="panel">
+    <h2>Order</h2>
+    <dl class="facts">
+      <dt>Placed</dt><dd>{{ order.placed_at | ist }}</dd>
+      <dt>Dispatched</dt><dd>{{ order.dispatched_at | ist }}</dd>
+      <dt>Delivered</dt><dd>{{ order.delivered_at | ist }}</dd>
+      <dt>Total</dt><dd>{{ order.total_paise | inr }}</dd>
+      <dt>Payment</dt><dd>{{ order.payment_method | humanize }}</dd>
+      <dt>Window ends</dt><dd>{{ order.return_window_ends_at | ist }}</dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <h2>Shipment</h2>
+    {% if order.shipments %}
+      {% set shipment = order.shipments[0] %}
+      <dl class="facts">
+        <dt>AWB</dt><dd>{{ shipment.awb }}</dd>
+        <dt>Courier</dt><dd>{{ shipment.courier }}</dd>
+        <dt>Weight</dt><dd>{{ shipment.weight_grams }} g</dd>
+        <dt>Packages</dt><dd>{{ shipment.package_count }}</dd>
+        <dt>Status</dt><dd>{{ shipment.status | humanize }}</dd>
+      </dl>
+    {% else %}<p class="muted">No shipment recorded.</p>{% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Items</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>SKU</th><th>Title</th><th>Qty</th><th>Unit price</th><th>Serial / IMEI</th><th>Batch</th><th>Expected weight</th></tr></thead>
+      <tbody>
+      {% for item in order.items %}
+        <tr>
+          <td>{{ item.sku_snapshot }}</td>
+          <td>{{ item.title_snapshot }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.unit_price_paise | inr }}</td>
+          <td>{{ item.serial_number or "—" }}{% if item.imei %}<br><span class="muted">{{ item.imei }}</span>{% endif %}</td>
+          <td>{{ item.batch_code or "—" }}</td>
+          <td>{{ item.expected_weight_grams or "—" }} g</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Returns &amp; verification</h2>
+  {% if order.returns %}
+    {% for ret in order.returns %}
+    <article class="subpanel">
+      <div class="panel-head">
+        <h3>{{ ret.rma_number }} <span class="pill">{{ ret.status | humanize }}</span></h3>
+        <span class="muted">{{ ret.requested_at | ist }}</span>
+      </div>
+      <dl class="facts">
+        <dt>Reason</dt><dd>{{ ret.reason_text or ret.reason_code }}</dd>
+        <dt>Buyer comment</dt><dd>{{ ret.buyer_comment or "—" }}</dd>
+        <dt>Received</dt><dd>{{ ret.received_at | ist }}</dd>
+        <dt>Refund</dt><dd>{{ ret.refund_amount_paise | inr }}</dd>
+        <dt>Reverse shipping</dt><dd>{{ ret.reverse_shipping_paise | inr }}</dd>
+      </dl>
+      {% if ret.verification %}
+        <div class="verdict {{ ret.verification.status }}">
+          <strong>{{ ret.verification.status | humanize }}</strong>
+          <span>score {{ "%.2f"|format(ret.verification.score) }}</span>
+          <ul>
+            {% for reason in ret.verification.reasons %}<li>{{ reason }}</li>{% endfor %}
+          </ul>
+        </div>
+      {% else %}
+        <p class="muted">No identity verification recorded yet.</p>
+      {% endif %}
+      <h4>Evidence ({{ ret.evidence | length }})</h4>
+      {% if ret.evidence %}
+        <ul class="evidence-list">
+          {% for ev in ret.evidence %}
+            <li><strong>{{ ev.filename }}</strong> · {{ ev.stage | humanize }} · {{ ev.captured_at | ist }}<br>
+              <code class="hash">{{ ev.sha256[:16] }}…</code></li>
+          {% endfor %}
+        </ul>
+      {% else %}<p class="muted">Evidence capture arrives in the next milestone.</p>{% endif %}
+    </article>
+    {% endfor %}
+  {% else %}
+    <p class="muted">No return request for this order.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Timeline</h2>
+  <ol class="timeline">
+    <li><strong>Order placed</strong><span>{{ order.placed_at | ist }}</span></li>
+    {% if order.dispatched_at %}<li><strong>Dispatched</strong><span>{{ order.dispatched_at | ist }}</span></li>{% endif %}
+    {% if order.delivered_at %}<li><strong>Delivered</strong><span>{{ order.delivered_at | ist }}</span></li>{% endif %}
+    {% for ret in order.returns %}
+      <li><strong>Return requested</strong><span>{{ ret.requested_at | ist }}</span></li>
+      {% if ret.received_at %}<li><strong>Return received</strong><span>{{ ret.received_at | ist }}</span></li>{% endif %}
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

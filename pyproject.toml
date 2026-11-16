@@ -23,6 +23,7 @@ dependencies = [
     "imagehash>=4.3",
     "reportlab>=4.2",
     "python-dateutil>=2.9",
+    "itsdangerous>=2.2",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +48,7 @@ src = ["returnproof", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]
 
 [tool.mypy]
 python_version = "3.12"

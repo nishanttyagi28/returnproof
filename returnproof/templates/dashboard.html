@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">{{ org.name }}</p>
+    <h1>Returns control room</h1>
+    <p class="muted">GSTIN {{ org.gstin }} · {{ org.city }}, {{ org.state }}</p>
+  </div>
+  <a class="button" href="/app/orders">Browse orders</a>
+</div>
+
+<section class="metric-grid" aria-label="Key metrics">
+  <article class="metric">
+    <span class="metric-label">Returns this week</span>
+    <strong>{{ metrics.returns_this_week }}</strong>
+  </article>
+  <article class="metric">
+    <span class="metric-label">Mismatch rate</span>
+    <strong>{{ "%.1f"|format(metrics.mismatch_rate * 100) }}%</strong>
+    <span class="metric-note">{{ metrics.mismatch_count }} of {{ metrics.verification_count }} verified</span>
+  </article>
+  <article class="metric">
+    <span class="metric-label">Money at risk</span>
+    <strong>{{ metrics.money_at_risk_paise | inr }}</strong>
+  </article>
+  <article class="metric">
+    <span class="metric-label">Recovered</span>
+    <strong>{{ metrics.money_recovered_paise | inr }}</strong>
+  </article>
+  <article class="metric">
+    <span class="metric-label">Open claims</span>
+    <strong>{{ metrics.open_claims }}</strong>
+    <span class="metric-note">{{ metrics.claims_due_soon }} due within 7 days</span>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Recent returns</h2>
+    <a href="/app/orders">All orders</a>
+  </div>
+  {% if recent_returns %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>RMA</th><th>Order</th><th>Marketplace</th><th>Status</th><th>Verification</th><th>Refund</th><th>Requested</th></tr></thead>
+      <tbody>
+      {% for item in recent_returns %}
+        <tr>
+          <td><a href="/app/orders/{{ item.order_id }}">{{ item.rma_number }}</a></td>
+          <td>{{ item.order.order_number }}</td>
+          <td>{{ item.order.marketplace.name }}</td>
+          <td><span class="pill">{{ item.status | humanize }}</span></td>
+          <td>
+            {% if item.verification %}
+              <span class="pill {{ item.verification.status }}">{{ item.verification.status | humanize }}</span>
+            {% else %}<span class="muted">Pending</span>{% endif %}
+          </td>
+          <td>{{ item.refund_amount_paise | inr }}</td>
+          <td>{{ item.requested_at | date_ist }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No returns recorded yet. Seed sample data to explore the product.</p>
+  {% endif %}
+</section>
+{% endblock %}
