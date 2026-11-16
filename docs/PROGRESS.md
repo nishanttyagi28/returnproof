@@ -14,7 +14,7 @@ and `pytest` pass locally.
 | R-007 | Settlement import + recovery ledger | done | 9af12ca | 44 |
 | R-008 | Web UI | done | 8e74986 | 47 |
 | R-009 | Ops: audit, export, jobs, limits, logging | done | 5e1e986 | 56 |
-| R-010 | Docs, demo, coverage gate | done | _pending_ | 57 |
+| R-010 | Docs, demo, coverage gate | done | f42ec4e | 57 |
 
 ## Final verification
 
