@@ -10,7 +10,7 @@ htmlcov/
 dist/
 build/
 .env
-data/
+/data/
 returnproof.db
 var/
 .DS_Store
