@@ -227,3 +227,7 @@ SSO and external hash-chain anchoring.
 ## License
 
 MIT © 2026 Nishant Tyagi. See [LICENSE](LICENSE).
+
+## How this was built
+
+Most of the code was written by an AI coding agent (DeepAI Code running DeepSeek) working through the milestones in `docs/`. I wrote the milestone specs, ran the test suite and reviewed the results before each commit.
