@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · ReturnProof{% endblock %}
+{% block content %}
+<section class="error-shell">
+  <div class="card error-card">
+    <p class="error-code">{{ status_code }}</p>
+    <h1>{{ title }}</h1>
+    <p class="muted">{{ message }}</p>
+    {% if request_id %}<p class="muted small">Request ID <code>{{ request_id }}</code></p>{% endif %}
+    <div class="actions">
+      <a class="button" href="/">Go home</a>
+      {% if user %}<a class="button secondary" href="/app">Dashboard</a>{% else %}<a class="button secondary" href="/login">Sign in</a>{% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

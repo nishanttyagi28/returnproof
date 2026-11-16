@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
+from returnproof.audit import audit_and_commit
 from returnproof.auth import csrf_token, get_current_user, validate_csrf
 from returnproof.db import get_db
 from returnproof.domain.enums import Role
@@ -116,6 +117,17 @@ async def import_settlement_page(
             period_start=_date(period_start),
             period_end=_date(period_end),
         )
+        audit_and_commit(
+            db,
+            org_id=current.org_id,
+            actor_user_id=current.id,
+            entity_type="settlement",
+            entity_id=result.settlement.id,
+            action="settlement.imported",
+            summary=f"Settlement {result.settlement.file_name} imported with {result.rows} rows",
+            data={"detected_paise": result.detected_paise},
+            ip_address=request.client.host if request.client else None,
+        )
         request.session["flash"] = (
             f"Imported {result.rows} settlement rows; "
             f"{result.entries_created} leakage entries detected."
@@ -200,6 +212,17 @@ def reconcile_claims_page(
     current = _editor(user)
     validate_csrf(request, csrf)
     report = reconcile_claims(db, current.org_id)
+    audit_and_commit(
+        db,
+        org_id=current.org_id,
+        actor_user_id=current.id,
+        entity_type="recovery",
+        entity_id="claims",
+        action="recovery.claims_reconciled",
+        summary="Approved claims reconciled against settlement payouts",
+        data={"entries_created": report.entries_created, "recovered": report.entries_recovered},
+        ip_address=request.client.host if request.client else None,
+    )
     request.session["flash"] = (
         f"Claim payout reconciliation: {report.entries_created} new at-risk entries, "
         f"{report.entries_recovered} recovered."
@@ -222,6 +245,17 @@ def recover_entry_page(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recovery entry not found")
     try:
         mark_recovered(db, entry)
+        audit_and_commit(
+            db,
+            org_id=current.org_id,
+            actor_user_id=current.id,
+            entity_type="recovery_entry",
+            entity_id=entry.id,
+            action="recovery.marked_recovered",
+            summary=f"Recovery entry {entry.id} marked recovered",
+            data={"amount_paise": entry.amount_paise},
+            ip_address=request.client.host if request.client else None,
+        )
         request.session["flash"] = "Recovery entry marked recovered."
     except SettlementError as exc:
         request.session["flash_error"] = str(exc)

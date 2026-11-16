@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
+from returnproof.audit import audit_and_commit
 from returnproof.auth import (
     csrf_token,
     get_current_user,
@@ -58,6 +59,14 @@ def login_submit(
     next: Annotated[str, Form()] = "/app",
 ) -> Response:
     validate_csrf(request, csrf)
+    client_key = request.client.host if request.client else "unknown"
+    limiter = request.app.state.login_limiter
+    if not limiter.allow(client_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many sign-in attempts. Try again shortly.",
+            headers={"Retry-After": str(limiter.retry_after(client_key))},
+        )
     normalized = email.strip().lower()
     user = db.scalar(select(User).where(User.email == normalized).order_by(User.id))
     if user is None or not verify_password(user.password_hash, password):
@@ -88,6 +97,16 @@ def login_submit(
         )
     user.last_login_at = utcnow()
     db.commit()
+    audit_and_commit(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.id,
+        entity_type="user",
+        entity_id=user.id,
+        action="auth.login",
+        summary=f"{user.email} signed in",
+        ip_address=request.client.host if request.client else None,
+    )
     login_session(request, user)
     return RedirectResponse(_safe_next(next), status_code=status.HTTP_303_SEE_OTHER)
 

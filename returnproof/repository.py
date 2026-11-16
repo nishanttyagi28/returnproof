@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from returnproof.domain.enums import ClaimStatus, RecoveryDirection, RecoveryStatus
 from returnproof.domain.models import (
+    AuditEvent,
     Claim,
     Evidence,
     Marketplace,
@@ -266,17 +267,22 @@ def get_organisation(db: Session, org_id: int) -> Organisation | None:
 
 
 def list_audit_events(
-    db: Session, org_id: int, *, entity_type: str | None = None, limit: int = 100
-) -> list[object]:
-    from returnproof.domain.models import AuditEvent
-
+    db: Session,
+    org_id: int,
+    *,
+    entity_type: str | None = None,
+    action: str | None = None,
+    limit: int = 200,
+) -> list[AuditEvent]:
     stmt = (
         select(AuditEvent)
         .where(AuditEvent.org_id == org_id)
-        .order_by(AuditEvent.created_at.desc())
+        .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
     )
     if entity_type:
         stmt = stmt.where(AuditEvent.entity_type == entity_type)
+    if action:
+        stmt = stmt.where(AuditEvent.action == action)
     return list(db.scalars(stmt.limit(limit)).all())
 
 
@@ -310,7 +316,9 @@ def dashboard_metrics(db: Session, org_id: int) -> DashboardMetrics:
     )
     verification_count = int(
         db.scalar(
-            select(func.count(VerificationResult.id)).where(VerificationResult.org_id == org_id)
+            select(func.count(VerificationResult.id)).where(
+                VerificationResult.org_id == org_id
+            )
         )
         or 0
     )
@@ -345,7 +353,8 @@ def dashboard_metrics(db: Session, org_id: int) -> DashboardMetrics:
     open_claims = int(
         db.scalar(
             select(func.count(Claim.id)).where(
-                Claim.org_id == org_id, Claim.status.in_([ClaimStatus.DRAFT.value, ClaimStatus.FILED.value])
+                Claim.org_id == org_id,
+                Claim.status.in_([ClaimStatus.DRAFT.value, ClaimStatus.FILED.value]),
             )
         )
         or 0

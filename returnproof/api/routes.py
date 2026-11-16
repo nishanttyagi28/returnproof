@@ -32,6 +32,7 @@ from returnproof.api.schemas import (
     VerificationOutFull,
     VerificationRequest,
 )
+from returnproof.audit import audit_and_commit
 from returnproof.auth import Principal, authenticate_api_key, generate_api_key, require_api_roles
 from returnproof.db import get_db
 from returnproof.domain.enums import Role, VerificationStatus
@@ -53,13 +54,15 @@ from returnproof.verification import (
     verify_return,
 )
 
-router = APIRouter(prefix="/api/v1", tags=["api"])
+router = APIRouter(prefix="/api/v1")
 
 Db = Annotated[Session, Depends(get_db)]
 PrincipalDep = Annotated[Principal, Depends(authenticate_api_key)]
 
 
-@router.get("/me", response_model=PrincipalOut, summary="Current API principal")
+@router.get(
+    "/me", response_model=PrincipalOut, summary="Current API principal", tags=["api-keys"]
+)
 def me(principal: PrincipalDep, db: Db) -> PrincipalOut:
     org = get_organisation(db, principal.org_id)
     if org is None:
@@ -72,7 +75,9 @@ def me(principal: PrincipalDep, db: Db) -> PrincipalOut:
     )
 
 
-@router.get("/orders", response_model=list[OrderOut], summary="List organisation orders")
+@router.get(
+    "/orders", response_model=list[OrderOut], summary="List organisation orders", tags=["orders"]
+)
 def orders(
     principal: PrincipalDep,
     db: Db,
@@ -94,7 +99,9 @@ def orders(
     return [OrderOut.model_validate(row) for row in rows]
 
 
-@router.get("/orders/{order_id}", response_model=OrderOut, summary="Get one order")
+@router.get(
+    "/orders/{order_id}", response_model=OrderOut, summary="Get one order", tags=["orders"]
+)
 def order_detail(order_id: int, principal: PrincipalDep, db: Db) -> OrderOut:
     order = get_order(db, principal.org_id, order_id)
     if order is None:
@@ -102,7 +109,9 @@ def order_detail(order_id: int, principal: PrincipalDep, db: Db) -> OrderOut:
     return OrderOut.model_validate(order)
 
 
-@router.get("/returns", response_model=list[ReturnOut], summary="List returns")
+@router.get(
+    "/returns", response_model=list[ReturnOut], summary="List returns", tags=["returns"]
+)
 def returns(
     principal: PrincipalDep,
     db: Db,
@@ -114,7 +123,9 @@ def returns(
     return [ReturnOut.model_validate(row) for row in rows]
 
 
-@router.get("/returns/{return_id}", response_model=ReturnOut, summary="Get one return")
+@router.get(
+    "/returns/{return_id}", response_model=ReturnOut, summary="Get one return", tags=["returns"]
+)
 def return_detail(return_id: int, principal: PrincipalDep, db: Db) -> ReturnOut:
     record = get_return(db, principal.org_id, return_id)
     if record is None:
@@ -122,7 +133,9 @@ def return_detail(return_id: int, principal: PrincipalDep, db: Db) -> ReturnOut:
     return ReturnOut.model_validate(record)
 
 
-@router.get("/verification-statuses", summary="Verification status vocabulary")
+@router.get(
+    "/verification-statuses", summary="Verification status vocabulary", tags=["verification"]
+)
 def verification_statuses() -> dict[str, list[str]]:
     return {"statuses": [item.value for item in VerificationStatus]}
 
@@ -132,9 +145,11 @@ def verification_statuses() -> dict[str, list[str]]:
     response_model=ApiKeyCreated,
     status_code=status.HTTP_201_CREATED,
     summary="Create an API key (owner only)",
+    tags=["api-keys"],
 )
 def create_api_key(
     payload: ApiKeyCreate,
+    request: Request,
     principal: Annotated[Principal, Depends(require_api_roles(Role.OWNER))],
     db: Db,
 ) -> ApiKeyCreated:
@@ -149,6 +164,16 @@ def create_api_key(
     db.add(key)
     db.commit()
     db.refresh(key)
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="api_key",
+        entity_id=key.id,
+        action="api_key.created",
+        summary=f"API key {key.name} created",
+        ip_address=request.client.host if request.client else None,
+    )
     return ApiKeyCreated(id=key.id, name=key.name, prefix=key.prefix, token=token)
 
 
@@ -156,6 +181,7 @@ def create_api_key(
     "/orders/{order_id}/evidence",
     response_model=list[EvidenceOut],
     summary="List evidence on an order",
+    tags=["evidence"],
 )
 def order_evidence(order_id: int, principal: PrincipalDep, db: Db) -> list[EvidenceOut]:
     if get_order(db, principal.org_id, order_id) is None:
@@ -168,6 +194,7 @@ def order_evidence(order_id: int, principal: PrincipalDep, db: Db) -> list[Evide
     response_model=EvidenceOut,
     status_code=status.HTTP_201_CREATED,
     summary="Upload evidence to an order's hash chain",
+    tags=["evidence"],
 )
 async def upload_evidence(
     order_id: int,
@@ -205,6 +232,17 @@ async def upload_evidence(
         )
     except (EvidenceValidationError, StorageError) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="evidence",
+        entity_id=evidence.id,
+        action="evidence.uploaded",
+        summary=f"Evidence {evidence.filename} added at {evidence.stage}",
+        data={"sha256": evidence.sha256, "chain_hash": evidence.chain_hash},
+        ip_address=request.client.host if request.client else None,
+    )
     return EvidenceOut.model_validate(evidence)
 
 
@@ -212,6 +250,7 @@ async def upload_evidence(
     "/orders/{order_id}/evidence/check",
     response_model=ChainReportOut,
     summary="Recompute and verify an order's evidence hash chain",
+    tags=["evidence"],
 )
 def check_evidence_chain(order_id: int, request: Request, principal: PrincipalDep, db: Db) -> ChainReportOut:
     if get_order(db, principal.org_id, order_id) is None:
@@ -239,6 +278,7 @@ def _payload(body: VerificationRequest) -> VerificationInput:
     "/returns/{return_id}/verification",
     response_model=VerificationOutFull,
     summary="Verify a returned unit against dispatch evidence",
+    tags=["verification"],
 )
 def run_verification(
     return_id: int,
@@ -261,6 +301,17 @@ def run_verification(
         storage=build_storage(settings),
         verifier_id=principal.user_id,
     )
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="verification",
+        entity_id=result.id,
+        action="verification.completed",
+        summary=f"Return {result.return_request_id} verified as {result.status}",
+        data={"score": result.score, "image_distance": result.image_distance},
+        ip_address=request.client.host if request.client else None,
+    )
     return VerificationOutFull.model_validate(result)
 
 
@@ -268,6 +319,7 @@ def run_verification(
     "/verifications/import",
     response_model=CsvVerificationResult,
     summary="Import return identifier checklist CSV and run verification",
+    tags=["verification"],
 )
 async def import_verification_csv(
     request: Request,

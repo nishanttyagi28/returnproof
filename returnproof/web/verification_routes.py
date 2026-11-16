@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
+from returnproof.audit import audit_and_commit
 from returnproof.auth import get_current_user, validate_csrf
 from returnproof.db import get_db
 from returnproof.domain.enums import Role
@@ -85,6 +86,17 @@ def verify_from_ui(
             weight_tolerance_percent=settings.weight_tolerance_percent,
             storage=build_storage(settings),
             verifier_id=user.id,
+        )
+        audit_and_commit(
+            db,
+            org_id=user.org_id,
+            actor_user_id=user.id,
+            entity_type="verification",
+            entity_id=result.id,
+            action="verification.completed",
+            summary=f"Return {result.return_request_id} verified as {result.status}",
+            data={"score": result.score, "image_distance": result.image_distance},
+            ip_address=request.client.host if request.client else None,
         )
         request.session["flash"] = (
             f"Verification complete: {result.status.replace('_', ' ').title()} "

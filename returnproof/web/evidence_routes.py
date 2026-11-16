@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
+from returnproof.audit import audit_and_commit
 from returnproof.auth import csrf_token, get_current_user, validate_csrf
 from returnproof.db import get_db
 from returnproof.domain.enums import Role
@@ -58,7 +59,7 @@ async def upload_evidence_page(
     settings = request.app.state.settings
     data = await file.read(settings.max_upload_mb * 1024 * 1024 + 1)
     try:
-        append_evidence(
+        evidence = append_evidence(
             db,
             build_storage(settings),
             order=order,
@@ -74,6 +75,17 @@ async def upload_evidence_page(
                 int(return_request_id) if return_request_id.strip().isdigit() else None
             ),
             max_bytes=settings.max_upload_mb * 1024 * 1024,
+        )
+        audit_and_commit(
+            db,
+            org_id=current.org_id,
+            actor_user_id=current.id,
+            entity_type="evidence",
+            entity_id=evidence.id,
+            action="evidence.uploaded",
+            summary=f"Evidence {evidence.filename} added at {evidence.stage}",
+            data={"sha256": evidence.sha256, "chain_hash": evidence.chain_hash},
+            ip_address=request.client.host if request.client else None,
         )
         request.session["flash"] = "Evidence added to the order hash chain."
     except (EvidenceValidationError, StorageError) as exc:

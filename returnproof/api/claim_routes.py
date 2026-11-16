@@ -15,6 +15,7 @@ from returnproof.api.schemas import (
     ClaimResolve,
     ClaimTemplateOut,
 )
+from returnproof.audit import audit_and_commit
 from returnproof.auth import Principal, authenticate_api_key, require_api_roles
 from returnproof.claims import (
     ClaimConflictError,
@@ -93,6 +94,16 @@ def create_return_claim(
         )
     except (ClaimConflictError, ClaimValidationError) as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="claim",
+        entity_id=claim.id,
+        action="claim.created",
+        summary=f"Claim {claim.reference} created with {claim.template_code} pack",
+        ip_address=request.client.host if request.client else None,
+    )
     return ClaimOut.model_validate(claim)
 
 
@@ -117,7 +128,9 @@ def claim_detail(claim_id: int, principal: PrincipalDep, db: Db) -> ClaimOut:
 
 
 @router.post("/claims/{claim_id}/file", response_model=ClaimOut, summary="File a draft claim")
-def file_claim_endpoint(claim_id: int, principal: Editor, db: Db) -> ClaimOut:
+def file_claim_endpoint(
+    claim_id: int, request: Request, principal: Editor, db: Db
+) -> ClaimOut:
     claim = get_claim(db, principal.org_id, claim_id)
     if claim is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Claim not found")
@@ -125,6 +138,16 @@ def file_claim_endpoint(claim_id: int, principal: Editor, db: Db) -> ClaimOut:
         updated = file_claim(db, claim, filed_at=datetime.now(UTC))
     except ClaimConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="claim",
+        entity_id=updated.id,
+        action="claim.filed",
+        summary=f"Claim {updated.reference} filed",
+        ip_address=request.client.host if request.client else None,
+    )
     return ClaimOut.model_validate(updated)
 
 
@@ -134,6 +157,7 @@ def file_claim_endpoint(claim_id: int, principal: Editor, db: Db) -> ClaimOut:
 def resolve_claim_endpoint(
     claim_id: int,
     body: ClaimResolve,
+    request: Request,
     principal: Editor,
     db: Db,
 ) -> ClaimOut:
@@ -150,6 +174,17 @@ def resolve_claim_endpoint(
         )
     except (ClaimConflictError, ClaimValidationError) as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="claim",
+        entity_id=updated.id,
+        action="claim.resolved",
+        summary=f"Claim {updated.reference} resolved as {updated.status}",
+        data={"amount_approved_paise": updated.amount_approved_paise},
+        ip_address=request.client.host if request.client else None,
+    )
     return ClaimOut.model_validate(updated)
 
 

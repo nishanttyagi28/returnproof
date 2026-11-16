@@ -28,6 +28,7 @@ from returnproof.api.schemas import (
     SettlementLineOut,
     SettlementOut,
 )
+from returnproof.audit import audit_and_commit
 from returnproof.auth import Principal, authenticate_api_key, require_api_roles
 from returnproof.db import get_db
 from returnproof.domain.enums import Role
@@ -108,6 +109,17 @@ async def import_settlement_endpoint(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="settlement",
+        entity_id=result.settlement.id,
+        action="settlement.imported",
+        summary=f"Settlement {result.settlement.file_name} imported with {result.rows} rows",
+        data={"detected_paise": result.detected_paise},
+        ip_address=request.client.host if request.client else None,
+    )
     return SettlementImportOut(
         settlement=SettlementOut.model_validate(result.settlement),
         rows=result.rows,
@@ -157,6 +169,17 @@ def reconcile_endpoint(
     if settlement is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Settlement not found")
     report = reconcile_settlement(db, settlement, settings=request.app.state.settings)
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="settlement",
+        entity_id=settlement.id,
+        action="settlement.reconciled",
+        summary=f"Settlement {settlement.id} reconciled",
+        data={"detected_paise": report.detected_paise},
+        ip_address=request.client.host if request.client else None,
+    )
     return ReconciliationOut(
         settlement_id=report.settlement_id,
         lines_checked=report.lines_checked,
@@ -196,8 +219,21 @@ def recovery_entries(
     response_model=ReconciliationOut,
     summary="Reconcile approved claims against recorded payouts",
 )
-def reconcile_claims_endpoint(db: Db, principal: Editor) -> ReconciliationOut:
+def reconcile_claims_endpoint(
+    request: Request, db: Db, principal: Editor
+) -> ReconciliationOut:
     report = reconcile_claims(db, principal.org_id)
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="recovery",
+        entity_id="claims",
+        action="recovery.claims_reconciled",
+        summary="Approved claims reconciled against settlement payouts",
+        data={"entries_created": report.entries_created, "recovered": report.entries_recovered},
+        ip_address=request.client.host if request.client else None,
+    )
     return ReconciliationOut(
         settlement_id=None,
         lines_checked=report.lines_checked,
@@ -213,7 +249,9 @@ def reconcile_claims_endpoint(db: Db, principal: Editor) -> ReconciliationOut:
     response_model=RecoveryEntryOut,
     summary="Mark a recovery entry as recovered",
 )
-def recover_entry(entry_id: int, db: Db, principal: Editor) -> RecoveryEntryOut:
+def recover_entry(
+    entry_id: int, request: Request, db: Db, principal: Editor
+) -> RecoveryEntryOut:
     entry = db.get(RecoveryEntry, entry_id)
     if entry is None or entry.org_id != principal.org_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recovery entry not found")
@@ -221,6 +259,17 @@ def recover_entry(entry_id: int, db: Db, principal: Editor) -> RecoveryEntryOut:
         updated = mark_recovered(db, entry)
     except SettlementError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    audit_and_commit(
+        db,
+        org_id=principal.org_id,
+        actor_user_id=principal.user_id,
+        entity_type="recovery_entry",
+        entity_id=updated.id,
+        action="recovery.marked_recovered",
+        summary=f"Recovery entry {updated.id} marked recovered",
+        data={"amount_paise": updated.amount_paise},
+        ip_address=request.client.host if request.client else None,
+    )
     return RecoveryEntryOut.model_validate(updated)
 
 

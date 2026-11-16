@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Audit log · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Operations</p>
+    <h1>Audit log</h1>
+    <p class="muted">Append-only record of authentication and state-changing actions.</p>
+  </div>
+  <a class="button secondary" href="/app/exports/audit.csv">Export CSV</a>
+</div>
+<form class="filters" method="get" action="/app/audit">
+  <label for="entity_type">Entity</label>
+  <input id="entity_type" name="entity_type" value="{{ entity_type }}" placeholder="claim, evidence…">
+  <label for="action">Action</label>
+  <input id="action" name="action" value="{{ action }}" placeholder="claim.filed">
+  <button class="button" type="submit">Filter</button>
+  <a class="button secondary" href="/app/audit">Clear</a>
+</form>
+{% if events %}
+<div class="table-wrap panel">
+  <table>
+    <thead><tr><th>When</th><th>Actor</th><th>Entity</th><th>Action</th><th>Summary</th><th>IP</th></tr></thead>
+    <tbody>
+    {% for event in events %}
+      <tr>
+        <td>{{ event.created_at | ist }}</td>
+        <td>{{ event.actor_user_id or "system" }}</td>
+        <td>{{ event.entity_type }} #{{ event.entity_id }}</td>
+        <td><code>{{ event.action }}</code></td>
+        <td>{{ event.summary }}</td>
+        <td>{{ event.ip_address or "—" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty panel">No audit events match this filter.</p>
+{% endif %}
+{% endblock %}

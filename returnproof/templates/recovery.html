@@ -7,7 +7,7 @@
     <h1>Money at risk vs recovered</h1>
     <p class="muted">Grouped by marketplace and month, based on the recovery ledger.</p>
   </div>
-  <a class="button secondary" href="/app/settlements">Import settlement</a>
+  <div class="actions"><a class="button secondary" href="/app/settlements">Import settlement</a><a class="button secondary" href="/app/exports/recovery.csv">Export recovery CSV</a></div>
 </div>
 {% if flash %}<div class="alert success" role="status">{{ flash }}</div>{% endif %}
 {% if flash_error %}<div class="alert error" role="alert">{{ flash_error }}</div>{% endif %}

@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
+from returnproof.audit import audit_and_commit
 from returnproof.auth import csrf_token, get_current_user, validate_csrf
 from returnproof.claims import (
     ClaimConflictError,
@@ -145,6 +146,16 @@ def create_claim_page(
         return RedirectResponse(
             f"/app/orders/{record.order_id}#returns", status_code=status.HTTP_303_SEE_OTHER
         )
+    audit_and_commit(
+        db,
+        org_id=current.org_id,
+        actor_user_id=current.id,
+        entity_type="claim",
+        entity_id=claim.id,
+        action="claim.created",
+        summary=f"Claim {claim.reference} created with {claim.template_code} pack",
+        ip_address=request.client.host if request.client else None,
+    )
     request.session["flash"] = f"Claim {claim.reference} created with HTML and PDF packs."
     return RedirectResponse(f"/app/claims/{claim.id}", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -164,6 +175,16 @@ def file_claim_page(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Claim not found")
     try:
         updated = file_claim(db, claim)
+        audit_and_commit(
+            db,
+            org_id=current.org_id,
+            actor_user_id=current.id,
+            entity_type="claim",
+            entity_id=updated.id,
+            action="claim.filed",
+            summary=f"Claim {updated.reference} filed",
+            ip_address=request.client.host if request.client else None,
+        )
         request.session["flash"] = (
             f"Claim filed. Deadline {updated.deadline_at:%d %b %Y} (IST)."
         )
@@ -193,6 +214,17 @@ def resolve_claim_page(
             claim,
             status=claim_status,
             amount_approved_paise=_rupees_to_paise(amount_rupees),
+        )
+        audit_and_commit(
+            db,
+            org_id=current.org_id,
+            actor_user_id=current.id,
+            entity_type="claim",
+            entity_id=claim.id,
+            action="claim.resolved",
+            summary=f"Claim {claim.reference} marked {claim_status}",
+            data={"amount_approved_paise": claim.amount_approved_paise},
+            ip_address=request.client.host if request.client else None,
         )
         request.session["flash"] = f"Claim marked {claim_status}."
     except (ClaimConflictError, ClaimValidationError) as exc:
