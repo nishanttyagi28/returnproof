@@ -139,7 +139,7 @@
   {% endif %}
 </section>
 
-<section class="panel">
+<section class="panel" id="returns">
   <h2>Returns &amp; verification</h2>
   {% if order.returns %}
     {% for ret in order.returns %}
@@ -165,6 +165,30 @@
         </div>
       {% else %}
         <p class="muted">No identity verification recorded yet.</p>
+      {% endif %}
+      {% if can_upload %}
+      <details class="verify-form">
+        <summary>Run identity verification</summary>
+        <form method="post" action="/app/returns/{{ ret.id }}/verify">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="form-row">
+            <div><label for="serial-{{ ret.id }}">Serial number</label><input id="serial-{{ ret.id }}" name="serial_number" maxlength="120" placeholder="From returned unit"></div>
+            <div><label for="imei-{{ ret.id }}">IMEI</label><input id="imei-{{ ret.id }}" name="imei" maxlength="32"></div>
+            <div><label for="barcode-{{ ret.id }}">Barcode</label><input id="barcode-{{ ret.id }}" name="barcode" maxlength="64"></div>
+            <div><label for="batch-{{ ret.id }}">Batch code</label><input id="batch-{{ ret.id }}" name="batch_code" maxlength="64"></div>
+            <div><label for="weight-{{ ret.id }}">Returned weight (g)</label><input id="weight-{{ ret.id }}" name="weight_grams" inputmode="numeric" placeholder="e.g. 205"></div>
+          </div>
+          <div class="form-row">
+            <div><label for="seal-{{ ret.id }}">Seal intact</label>
+              <select id="seal-{{ ret.id }}" name="seal_intact"><option value="">Not checked</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+            <div><label for="acc-{{ ret.id }}">Accessories</label>
+              <select id="acc-{{ ret.id }}" name="accessories_present"><option value="">Not checked</option><option value="yes">Present</option><option value="no">Missing</option></select></div>
+            <div><label for="tags-{{ ret.id }}">Tags</label>
+              <select id="tags-{{ ret.id }}" name="tags_present"><option value="">Not checked</option><option value="yes">Present</option><option value="no">Missing</option></select></div>
+          </div>
+          <button class="button" type="submit">Run verification</button>
+        </form>
+      </details>
       {% endif %}
       <h4>Return-receipt evidence ({{ ret.evidence | length }})</h4>
       {% if ret.evidence %}

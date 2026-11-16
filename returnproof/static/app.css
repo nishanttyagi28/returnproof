@@ -119,3 +119,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .75rem; }
 .form-row > div { display: grid; gap: .3rem; }
 .upload-form .button { justify-self: start; margin-top: .5rem; border: 0; cursor: pointer; }
+.verify-form { margin: .75rem 0; border: 1px dashed var(--line); border-radius: .55rem; padding: .6rem .8rem; }
+.verify-form summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+.verify-form form { display: grid; gap: .6rem; margin-top: .8rem; }
+.verify-form .button { justify-self: start; border: 0; cursor: pointer; }

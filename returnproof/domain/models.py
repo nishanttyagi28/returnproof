@@ -207,6 +207,7 @@ class OrderItem(TimestampMixin, Base):
     unit_price_paise: Mapped[int] = mapped_column(Integer, default=0)
     serial_number: Mapped[str | None] = mapped_column(String(120))
     imei: Mapped[str | None] = mapped_column(String(32))
+    barcode: Mapped[str | None] = mapped_column(String(64))
     batch_code: Mapped[str | None] = mapped_column(String(64))
     expected_weight_grams: Mapped[int | None] = mapped_column(Integer)
 
@@ -317,6 +318,7 @@ class VerificationResult(TimestampMixin, Base):
     reasons: Mapped[list[Any]] = mapped_column(JSON, default=list)
     checklist: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     identifier_checks: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    returned_identifiers: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     image_distance: Mapped[int | None] = mapped_column(Integer)
     dispatch_evidence_id: Mapped[int | None] = mapped_column(ForeignKey("evidence.id"))
     return_evidence_id: Mapped[int | None] = mapped_column(ForeignKey("evidence.id"))

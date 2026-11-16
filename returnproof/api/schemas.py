@@ -107,6 +107,44 @@ class ChainReportOut(ApiModel):
     problems: list[ChainProblemOut]
 
 
+class VerificationRequest(BaseModel):
+    serial_number: str | None = Field(default=None, max_length=120)
+    imei: str | None = Field(default=None, max_length=32)
+    barcode: str | None = Field(default=None, max_length=64)
+    batch_code: str | None = Field(default=None, max_length=64)
+    seal_intact: bool | None = None
+    accessories_present: bool | None = None
+    tags_present: bool | None = None
+    weight_grams: int | None = Field(default=None, ge=0, le=100_000)
+
+
+class VerificationOutFull(ApiModel):
+    id: int
+    return_request_id: int
+    status: str
+    score: float
+    reasons: list[object]
+    checklist: dict[str, object]
+    identifier_checks: dict[str, object]
+    returned_identifiers: dict[str, object]
+    image_distance: int | None
+    dispatch_evidence_id: int | None
+    return_evidence_id: int | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CsvIssueOut(BaseModel):
+    row_number: int
+    message: str
+
+
+class CsvVerificationResult(BaseModel):
+    processed: int
+    results: list[VerificationOutFull]
+    errors: list[CsvIssueOut]
+
+
 class ApiKeyCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
 

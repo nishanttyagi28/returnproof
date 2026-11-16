@@ -15,25 +15,31 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from returnproof.api.schemas import (
     ApiKeyCreate,
     ApiKeyCreated,
     ChainReportOut,
+    CsvIssueOut,
+    CsvVerificationResult,
     EvidenceOut,
     OrderOut,
     OrganisationOut,
     PrincipalOut,
     ReturnOut,
+    VerificationOutFull,
+    VerificationRequest,
 )
 from returnproof.auth import Principal, authenticate_api_key, generate_api_key, require_api_roles
 from returnproof.db import get_db
 from returnproof.domain.enums import Role, VerificationStatus
-from returnproof.domain.models import ApiKey
+from returnproof.domain.models import ApiKey, ReturnRequest
 from returnproof.evidence import EvidenceValidationError, append_evidence, verify_order_chain
 from returnproof.repository import (
     get_order,
+    get_order_by_number,
     get_organisation,
     get_return,
     list_evidence,
@@ -41,6 +47,11 @@ from returnproof.repository import (
     list_returns,
 )
 from returnproof.storage import StorageError, build_storage
+from returnproof.verification import (
+    VerificationInput,
+    parse_verification_csv,
+    verify_return,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["api"])
 
@@ -207,3 +218,117 @@ def check_evidence_chain(order_id: int, request: Request, principal: PrincipalDe
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     report = verify_order_chain(db, build_storage(request.app.state.settings), principal.org_id, order_id)
     return ChainReportOut.model_validate(report)
+
+
+def _payload(body: VerificationRequest) -> VerificationInput:
+    return VerificationInput(
+        identifiers={
+            "serial_number": body.serial_number,
+            "imei": body.imei,
+            "barcode": body.barcode,
+            "batch_code": body.batch_code,
+        },
+        seal_intact=body.seal_intact,
+        accessories_present=body.accessories_present,
+        tags_present=body.tags_present,
+        weight_grams=body.weight_grams,
+    )
+
+
+@router.post(
+    "/returns/{return_id}/verification",
+    response_model=VerificationOutFull,
+    summary="Verify a returned unit against dispatch evidence",
+)
+def run_verification(
+    return_id: int,
+    body: VerificationRequest,
+    request: Request,
+    db: Db,
+    principal: Annotated[Principal, Depends(require_api_roles(Role.OWNER, Role.OPS))],
+) -> VerificationOutFull:
+    record = get_return(db, principal.org_id, return_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Return not found")
+    settings = request.app.state.settings
+    result = verify_return(
+        db,
+        return_request=record,
+        payload=_payload(body),
+        threshold=settings.phash_threshold,
+        weight_tolerance_grams=settings.weight_tolerance_grams,
+        weight_tolerance_percent=settings.weight_tolerance_percent,
+        storage=build_storage(settings),
+        verifier_id=principal.user_id,
+    )
+    return VerificationOutFull.model_validate(result)
+
+
+@router.post(
+    "/verifications/import",
+    response_model=CsvVerificationResult,
+    summary="Import return identifier checklist CSV and run verification",
+)
+async def import_verification_csv(
+    request: Request,
+    db: Db,
+    principal: Annotated[Principal, Depends(require_api_roles(Role.OWNER, Role.OPS))],
+    file: Annotated[UploadFile, File()],
+) -> CsvVerificationResult:
+    raw = await file.read(5 * 1024 * 1024 + 1)
+    if len(raw) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="CSV exceeds 5 MB"
+        )
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="CSV must be UTF-8"
+        ) from exc
+    rows, issues = parse_verification_csv(text)
+    settings = request.app.state.settings
+    results: list[VerificationOutFull] = []
+    errors = [CsvIssueOut(row_number=issue.row_number, message=issue.message) for issue in issues]
+    for row in rows:
+        record = None
+        if row.rma_number:
+            record = db.scalar(
+                select(ReturnRequest)
+                .where(
+                    ReturnRequest.org_id == principal.org_id,
+                    ReturnRequest.rma_number == row.rma_number,
+                )
+                .order_by(ReturnRequest.id.desc())
+            )
+        if record is None and row.order_number:
+            order = get_order_by_number(db, principal.org_id, row.order_number)
+            if order is not None:
+                record = db.scalar(
+                    select(ReturnRequest)
+                    .where(ReturnRequest.order_id == order.id)
+                    .order_by(ReturnRequest.id.desc())
+                )
+        if record is None:
+            errors.append(
+                CsvIssueOut(
+                    row_number=row.row_number,
+                    message=f"No return found for {row.rma_number or row.order_number}",
+                )
+            )
+            continue
+        try:
+            result = verify_return(
+                db,
+                return_request=record,
+                payload=row.payload,
+                threshold=settings.phash_threshold,
+                weight_tolerance_grams=settings.weight_tolerance_grams,
+                weight_tolerance_percent=settings.weight_tolerance_percent,
+                storage=build_storage(settings),
+                verifier_id=principal.user_id,
+            )
+            results.append(VerificationOutFull.model_validate(result))
+        except ValueError as exc:
+            errors.append(CsvIssueOut(row_number=row.row_number, message=str(exc)))
+    return CsvVerificationResult(processed=len(results), results=results, errors=errors)
