@@ -164,6 +164,7 @@ def order_detail_page(
         return RedirectResponse(
             f"/login?next=/app/orders/{order_id}", status_code=status.HTTP_303_SEE_OTHER
         )
+    from returnproof.claims import claim_eligible, load_claim_templates
     from returnproof.evidence import verify_order_chain
     from returnproof.repository import get_order, list_evidence
     from returnproof.storage import build_storage
@@ -187,6 +188,8 @@ def order_detail_page(
             "flash": flash,
             "flash_error": flash_error,
             "can_upload": user.role in {"owner", "ops"},
+            "claim_eligible": claim_eligible,
+            "claim_templates": load_claim_templates(),
             "csrf": csrf_token(request),
         },
     )

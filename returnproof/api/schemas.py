@@ -145,6 +145,44 @@ class CsvVerificationResult(BaseModel):
     errors: list[CsvIssueOut]
 
 
+class ClaimCreate(BaseModel):
+    template_code: str | None = None
+    amount_claimed_paise: int | None = Field(default=None, gt=0)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class ClaimResolve(BaseModel):
+    status: str
+    amount_approved_paise: int | None = Field(default=None, ge=0)
+
+
+class ClaimOut(ApiModel):
+    id: int
+    reference: str
+    status: str
+    template_code: str
+    order_id: int
+    return_request_id: int | None
+    marketplace_id: int
+    amount_claimed_paise: int
+    amount_approved_paise: int
+    filed_at: datetime | None
+    deadline_at: datetime | None
+    resolved_at: datetime | None
+    pack_path: str | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ClaimTemplateOut(BaseModel):
+    code: str
+    name: str
+    title: str
+    subtitle: str
+    sections: list[str]
+
+
 class ApiKeyCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
 

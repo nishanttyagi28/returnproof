@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ template.title }} · {{ claim.reference }}</title>
+<style>
+  :root { --accent: {{ template.accent }}; --ink: #101828; --muted: #475467; --line: #d0d5dd; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; color: var(--ink); background: #fff; line-height: 1.5; }
+  .page { max-width: 860px; margin: 0 auto; padding: 36px 40px 60px; }
+  header { border-top: 8px solid var(--accent); padding-top: 18px; margin-bottom: 20px; }
+  .brandline { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .brand { font-weight: 700; color: var(--accent); letter-spacing: .02em; }
+  .ref { font-family: ui-monospace, monospace; font-size: .85rem; color: var(--muted); }
+  h1 { font-size: 1.9rem; margin: .5rem 0 .2rem; color: var(--accent); }
+  .subtitle { color: var(--muted); margin: 0 0 .6rem; }
+  .sample { display: inline-block; background: #fffaeb; color: #b54708; border: 1px solid #fedf89; padding: .2rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+  h2 { font-size: 1.12rem; margin: 1.6rem 0 .5rem; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: .25rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: .4rem 0 .8rem; }
+  th, td { text-align: left; border: 1px solid var(--line); padding: .4rem .5rem; vertical-align: top; }
+  th { background: #f6f8fa; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+  .meta { width: 100%; }
+  .meta td:nth-child(odd) { width: 20%; color: var(--muted); background: #fbfcfd; }
+  .timeline { list-style: none; padding: 0; margin: .4rem 0; border-left: 2px solid var(--line); }
+  .timeline li { padding: .2rem 0 .5rem .9rem; position: relative; font-size: .9rem; }
+  .timeline li::before { content: ""; position: absolute; left: -.42rem; top: .5rem; width: .65rem; height: .65rem; border-radius: 50%; background: var(--accent); }
+  .timeline strong { display: block; }
+  .timeline span { color: var(--muted); font-size: .82rem; }
+  .verdict { border-left: 4px solid var(--accent); background: #f8fafc; padding: .6rem .8rem; margin: .5rem 0 .8rem; }
+  .verdict ul { margin: .4rem 0 0; padding-left: 1.1rem; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .8rem; margin: .6rem 0 1rem; }
+  figure { margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  figure img { width: 100%; height: 150px; object-fit: cover; display: block; background: #eef2f6; }
+  figcaption { padding: .45rem .55rem; font-size: .78rem; }
+  figcaption span { display: block; color: var(--muted); }
+  code { font-family: ui-monospace, monospace; font-size: .78rem; word-break: break-all; }
+  .declaration { border: 1px solid var(--line); border-radius: 6px; padding: .8rem; background: #fbfcfd; font-size: .9rem; }
+  .notes { padding-left: 1.2rem; font-size: .88rem; }
+  .legal { margin-top: 1.5rem; color: var(--muted); font-size: .78rem; }
+  footer { margin-top: 2rem; border-top: 1px solid var(--line); padding-top: .6rem; color: var(--muted); font-size: .76rem; display: flex; justify-content: space-between; gap: 1rem; }
+  @media print { .page { padding: 0; max-width: none; } figure { break-inside: avoid; } h2 { break-after: avoid; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brandline">
+      <span class="brand">ReturnProof · evidence pack</span>
+      <span class="ref">{{ claim.reference }}</span>
+    </div>
+    <h1>{{ template.title }}</h1>
+    <p class="subtitle">{{ template.subtitle }}</p>
+    {% if claim.is_sample %}<span class="sample">SAMPLE DATA — synthetic demo records</span>{% endif %}
+  </header>
+
+  {% for section in template.sections %}
+    {% if section == "summary" %}
+    <section>
+      <h2>Claim summary</h2>
+      <table class="meta">
+        <tr><td>Claim reference</td><td>{{ claim.reference }}</td><td>Status</td><td>{{ claim.status | humanize }}</td></tr>
+        <tr><td>Marketplace</td><td>{{ marketplace.name }}</td><td>Template</td><td>{{ template.name }}</td></tr>
+        <tr><td>{{ template.labels.claim_amount }}</td><td>{{ claim.amount_claimed_paise | inr }}</td><td>Deadline</td><td>{{ claim.deadline_at | ist }}</td></tr>
+        <tr><td>Seller</td><td>{{ organisation.legal_name or organisation.name }}</td><td>GSTIN</td><td>{{ organisation.gstin or "—" }}</td></tr>
+        <tr><td>Filed</td><td>{{ claim.filed_at | ist }}</td><td>Approved</td><td>{{ claim.amount_approved_paise | inr }}</td></tr>
+      </table>
+    </section>
+    {% elif section == "order" %}
+    <section>
+      <h2>Order details</h2>
+      <table>
+        <tr><th>{{ template.labels.order_reference }}</th><td>{{ order.order_number }}</td><th>Placed</th><td>{{ order.placed_at | ist }}</td></tr>
+        <tr><th>Buyer</th><td>{{ order.customer_name }}</td><th>Pincode</th><td>{{ order.customer_pincode or "—" }}</td></tr>
+        <tr><th>{{ template.labels.return_reference }}</th><td>{{ return_request.rma_number }}</td><th>Reason</th><td>{{ return_request.reason_text or return_request.reason_code }}</td></tr>
+        <tr><th>Order total</th><td>{{ order.total_paise | inr }}</td><th>Refund issued</th><td>{{ return_request.refund_amount_paise | inr }}</td></tr>
+      </table>
+      <table>
+        <thead><tr><th>SKU</th><th>Item</th><th>Qty</th><th>Unit price</th><th>Serial / IMEI</th><th>Expected weight</th></tr></thead>
+        <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.sku_snapshot }}</td>
+            <td>{{ item.title_snapshot }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.unit_price_paise | inr }}</td>
+            <td>{{ item.serial_number or item.imei or item.barcode or "—" }}</td>
+            <td>{{ item.expected_weight_grams or "—" }} g</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% elif section == "timeline" %}
+    <section>
+      <h2>Timeline</h2>
+      <ul class="timeline">
+        {% for event in timeline %}
+          <li><strong>{{ event.label }}</strong><span>{{ event.at | ist }} · {{ event.note }}</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% elif section == "verification" %}
+    <section>
+      <h2>{{ template.labels.verification }}</h2>
+      {% if verification %}
+        <div class="verdict">
+          <strong>{{ verification.status | humanize }}</strong> · score {{ "%.2f"|format(verification.score) }}
+          {% if verification.image_distance is not none %} · perceptual distance {{ verification.image_distance }}{% endif %}
+          <ul>
+            {% for reason in verification.reasons %}<li>{{ reason }}</li>{% endfor %}
+          </ul>
+        </div>
+        {% if verification.identifier_checks %}
+        <table>
+          <thead><tr><th>Identifier</th><th>Expected</th><th>Returned</th><th>Result</th></tr></thead>
+          <tbody>
+          {% for check in verification.identifier_checks.values() %}
+            <tr><td>{{ check.label }}</td><td>{{ check.expected or "—" }}</td><td>{{ check.submitted or "—" }}</td><td>{{ check.status | humanize }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+        {% if verification.checklist %}
+        <table>
+          <tbody>
+            <tr><th>Seal intact</th><td>{{ verification.checklist.seal_intact if verification.checklist.seal_intact is not none else "Not checked" }}</td><th>Accessories</th><td>{{ verification.checklist.accessories_present if verification.checklist.accessories_present is not none else "Not checked" }}</td></tr>
+            <tr><th>Tags</th><td>{{ verification.checklist.tags_present if verification.checklist.tags_present is not none else "Not checked" }}</td><th>Weight</th><td>{{ verification.checklist.weight_grams or "—" }} g (expected {{ verification.checklist.expected_weight_grams or "—" }} g)</td></tr>
+          </tbody>
+        </table>
+        {% endif %}
+      {% else %}
+        <p>No verification result is recorded for this return.</p>
+      {% endif %}
+    </section>
+    {% elif section == "evidence" %}
+    <section>
+      <h2>{{ template.labels.evidence }}</h2>
+      {% if evidence %}
+        <div class="gallery">
+          {% for ev in evidence %}
+            <figure>
+              {% if ev.data_uri %}<img src="{{ ev.data_uri }}" alt="{{ ev.filename }}">{% endif %}
+              <figcaption>
+                <strong>{{ ev.filename }}</strong>
+                <span>{{ ev.stage | humanize }} · #{{ ev.chain_index }} · {{ ev.captured_at | ist }}</span>
+                <span>{{ ev.uploader_label }}{% if ev.device_note %} · {{ ev.device_note }}{% endif %}</span>
+              </figcaption>
+            </figure>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No evidence files are linked to this order.</p>
+      {% endif %}
+    </section>
+    {% elif section == "hashes" %}
+    <section>
+      <h2>Evidence integrity</h2>
+      <table>
+        <thead><tr><th>#</th><th>File</th><th>Stage</th><th>SHA-256</th><th>Chain hash</th></tr></thead>
+        <tbody>
+        {% for ev in evidence %}
+          <tr><td>{{ ev.chain_index }}</td><td>{{ ev.filename }}</td><td>{{ ev.stage | humanize }}</td><td><code>{{ ev.sha256 }}</code></td><td><code>{{ ev.chain_hash }}</code></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% elif section == "declaration" %}
+    <section>
+      <h2>Declaration</h2>
+      <div class="declaration">{{ template.declaration }}</div>
+    </section>
+    {% elif section == "notes" %}
+    <section>
+      <h2>Submission notes</h2>
+      <ol class="notes">
+        {% for note in template.submission_notes %}<li>{{ note }}</li>{% endfor %}
+      </ol>
+    </section>
+    {% endif %}
+  {% endfor %}
+
+  {% if claim.notes %}<section><h2>Internal notes</h2><p>{{ claim.notes }}</p></section>{% endif %}
+  {% if template.legal_note %}<p class="legal">{{ template.legal_note }}</p>{% endif %}
+  <footer>
+    <span>ReturnProof · evidence-backed returns operations</span>
+    <span>Generated {{ generated_at | ist }}</span>
+  </footer>
+</div>
+</body>
+</html>

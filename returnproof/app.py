@@ -11,10 +11,12 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from returnproof import __version__
+from returnproof.api.claim_routes import router as claim_api_router
 from returnproof.api.routes import router as api_router
 from returnproof.config import Settings, get_settings
 from returnproof.db import build_engine, build_session_factory
 from returnproof.web.auth_routes import router as app_router
+from returnproof.web.claim_routes import router as claim_router
 from returnproof.web.evidence_routes import router as evidence_router
 from returnproof.web.routes import router as web_router
 from returnproof.web.verification_routes import router as verification_router
@@ -59,9 +61,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         https_only=app_settings.is_production,
     )
     app.include_router(api_router)
+    app.include_router(claim_api_router)
     app.include_router(app_router)
     app.include_router(evidence_router)
     app.include_router(verification_router)
+    app.include_router(claim_router)
     app.include_router(web_router)
 
     @app.get("/healthz", tags=["system"], summary="Liveness probe")

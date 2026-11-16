@@ -352,6 +352,9 @@ class Claim(TimestampMixin, Base):
     pack_path: Mapped[str | None] = mapped_column(String(500))
     is_sample: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    marketplace: Mapped[Marketplace] = relationship()
+    return_request: Mapped[ReturnRequest | None] = relationship()
+
 
 class Settlement(TimestampMixin, Base):
     __tablename__ = "settlements"

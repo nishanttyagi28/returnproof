@@ -128,10 +128,28 @@ def list_evidence(db: Session, org_id: int, order_id: int) -> list[Evidence]:
 
 
 def list_claims(db: Session, org_id: int, *, status: str | None = None) -> list[Claim]:
-    stmt = select(Claim).where(Claim.org_id == org_id)
+    stmt = (
+        select(Claim)
+        .where(Claim.org_id == org_id)
+        .options(
+            selectinload(Claim.marketplace),
+            selectinload(Claim.return_request),
+        )
+    )
     if status:
         stmt = stmt.where(Claim.status == status)
     return list(db.scalars(stmt.order_by(Claim.created_at.desc())).all())
+
+
+def get_claim(db: Session, org_id: int, claim_id: int) -> Claim | None:
+    return db.scalar(
+        select(Claim)
+        .where(Claim.id == claim_id, Claim.org_id == org_id)
+        .options(
+            selectinload(Claim.marketplace),
+            selectinload(Claim.return_request),
+        )
+    )
 
 
 def list_recoveries(

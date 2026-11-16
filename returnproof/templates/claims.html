@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Claims · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Recovery</p>
+    <h1>Claims</h1>
+    <p class="muted">Draft, file and resolve marketplace claims with evidence packs.</p>
+  </div>
+</div>
+<form class="filters" method="get" action="/app/claims">
+  <label for="claim_status">Status</label>
+  <select id="claim_status" name="claim_status">
+    <option value="">All statuses</option>
+    {% for value in ["draft", "filed", "approved", "rejected", "partial"] %}
+      <option value="{{ value }}" {% if claim_status == value %}selected{% endif %}>{{ value | humanize }}</option>
+    {% endfor %}
+  </select>
+  <button class="button" type="submit">Filter</button>
+</form>
+{% if claims %}
+<div class="table-wrap panel">
+  <table>
+    <thead><tr><th>Reference</th><th>Order</th><th>Marketplace</th><th>Status</th><th>Claimed</th><th>Approved</th><th>Deadline</th></tr></thead>
+    <tbody>
+    {% for claim in claims %}
+      <tr>
+        <td><a href="/app/claims/{{ claim.id }}">{{ claim.reference }}</a></td>
+        <td>#{{ claim.order_id }}</td>
+        <td>{{ claim.marketplace.name }}</td>
+        <td><span class="pill {{ claim.status }}">{{ claim.status | humanize }}</span></td>
+        <td>{{ claim.amount_claimed_paise | inr }}</td>
+        <td>{{ claim.amount_approved_paise | inr }}</td>
+        <td>{{ claim.deadline_at | date_ist }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty panel">No claims yet. Verify a returned unit as a mismatch, then build a claim pack from the order page.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ claim.reference }} · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow"><a href="/app/claims">Claims</a> / {{ claim.marketplace.name }}</p>
+    <h1>{{ claim.reference }}</h1>
+    <p class="muted">Template {{ claim.template_code }} · {{ claim.status | humanize }}</p>
+  </div>
+  <span class="pill {{ claim.status }}">{{ claim.status | humanize }}</span>
+</div>
+{% if flash %}<div class="alert success" role="status">{{ flash }}</div>{% endif %}
+{% if flash_error %}<div class="alert error" role="alert">{{ flash_error }}</div>{% endif %}
+
+<section class="two-col">
+  <div class="panel">
+    <h2>Claim</h2>
+    <dl class="facts">
+      <dt>Claimed</dt><dd>{{ claim.amount_claimed_paise | inr }}</dd>
+      <dt>Approved</dt><dd>{{ claim.amount_approved_paise | inr }}</dd>
+      <dt>Filed</dt><dd>{{ claim.filed_at | ist }}</dd>
+      <dt>Deadline</dt><dd>{{ claim.deadline_at | ist }}</dd>
+      <dt>Resolved</dt><dd>{{ claim.resolved_at | ist }}</dd>
+      <dt>Notes</dt><dd>{{ claim.notes or "—" }}</dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <h2>Source</h2>
+    <dl class="facts">
+      <dt>Order</dt><dd><a href="/app/orders/{{ claim.order_id }}">{{ order.order_number if order else claim.order_id }}</a></dd>
+      <dt>Marketplace</dt><dd>{{ claim.marketplace.name }}</dd>
+      <dt>Return</dt><dd>{{ claim.return_request.rma_number if claim.return_request else "—" }}</dd>
+      <dt>Claim window</dt><dd>{{ claim.marketplace.claim_window_days }} days</dd>
+    </dl>
+    <p class="pack-links">
+      <a class="button secondary" href="/app/claims/{{ claim.id }}/pack?format=html" target="_blank" rel="noopener">Preview HTML pack</a>
+      <a class="button" href="/app/claims/{{ claim.id }}/pack?format=pdf">Download PDF</a>
+    </p>
+  </div>
+</section>
+
+{% if order and order.returns %}
+<section class="panel">
+  <h2>Verification summary</h2>
+  {% for ret in order.returns %}
+    {% if claim.return_request_id == ret.id and ret.verification %}
+      <p><span class="pill {{ ret.verification.status }}">{{ ret.verification.status | humanize }}</span> score {{ "%.2f"|format(ret.verification.score) }}</p>
+      <ul>{% for reason in ret.verification.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    {% endif %}
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if can_edit %}
+<section class="panel">
+  <h2>Lifecycle</h2>
+  {% if claim.status == "draft" %}
+    <p>Filing starts the {{ claim.marketplace.claim_window_days }}-day claim window.</p>
+    <form method="post" action="/app/claims/{{ claim.id }}/file" class="inline-stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="button" type="submit">File claim</button>
+    </form>
+  {% elif claim.status == "filed" %}
+    <form method="post" action="/app/claims/{{ claim.id }}/resolve" class="resolve-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div>
+        <label for="claim_status">Outcome</label>
+        <select id="claim_status" name="claim_status" required>
+          <option value="approved">Approved</option>
+          <option value="partial">Partially approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div>
+        <label for="amount_rupees">Approved amount (INR)</label>
+        <input id="amount_rupees" name="amount_rupees" inputmode="decimal" placeholder="e.g. 1249.50">
+      </div>
+      <button class="button" type="submit">Record outcome</button>
+    </form>
+  {% else %}
+    <p>This claim is resolved. Approved amount: <strong>{{ claim.amount_approved_paise | inr }}</strong>.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

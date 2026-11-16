@@ -39,7 +39,7 @@ dev = [
 include = ["returnproof*"]
 
 [tool.setuptools.package-data]
-returnproof = ["templates/**/*.html", "static/**/*"]
+returnproof = ["templates/**/*.html", "static/**/*", "data/**/*.json"]
 
 [tool.ruff]
 line-length = 100

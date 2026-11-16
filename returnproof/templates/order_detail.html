@@ -190,6 +190,31 @@
         </form>
       </details>
       {% endif %}
+      {% if can_upload and claim_eligible(ret, ret.verification) %}
+      <details class="verify-form">
+        <summary>Build claim / dispute pack</summary>
+        <form method="post" action="/app/returns/{{ ret.id }}/claims">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="form-row">
+            <div>
+              <label for="template-{{ ret.id }}">Template</label>
+              <select id="template-{{ ret.id }}" name="template_code">
+                {% for code, template in claim_templates.items() %}
+                  <option value="{{ code }}">{{ template.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="amount-{{ ret.id }}">Amount claimed (INR)</label>
+              <input id="amount-{{ ret.id }}" name="amount_rupees" inputmode="decimal" value="{{ '%.2f'|format((ret.refund_amount_paise or order.total_paise) / 100) }}">
+            </div>
+          </div>
+          <label for="notes-{{ ret.id }}">Internal notes</label>
+          <input id="notes-{{ ret.id }}" name="notes" maxlength="2000" placeholder="Optional context for your team">
+          <button class="button" type="submit">Generate HTML + PDF pack</button>
+        </form>
+      </details>
+      {% endif %}
       <h4>Return-receipt evidence ({{ ret.evidence | length }})</h4>
       {% if ret.evidence %}
         <ul class="evidence-list">
