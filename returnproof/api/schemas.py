@@ -72,6 +72,41 @@ class ReturnOut(ReturnSummaryOut):
     buyer_comment: str | None
 
 
+class EvidenceOut(ApiModel):
+    id: int
+    return_request_id: int | None
+    stage: str
+    kind: str
+    chain_index: int
+    filename: str
+    content_type: str
+    size_bytes: int
+    sha256: str
+    previous_hash: str
+    chain_hash: str
+    captured_at: datetime
+    uploader_label: str
+    device_note: str | None
+    width: int | None
+    height: int | None
+    perceptual_hash: str | None
+
+
+class ChainProblemOut(ApiModel):
+    evidence_id: int | None
+    code: str
+    message: str
+
+
+class ChainReportOut(ApiModel):
+    order_id: int
+    evidence_count: int
+    valid: bool
+    head_hash: str | None
+    checked_at: datetime
+    problems: list[ChainProblemOut]
+
+
 class ApiKeyCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
 

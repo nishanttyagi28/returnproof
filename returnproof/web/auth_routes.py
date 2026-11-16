@@ -164,11 +164,17 @@ def order_detail_page(
         return RedirectResponse(
             f"/login?next=/app/orders/{order_id}", status_code=status.HTTP_303_SEE_OTHER
         )
-    from returnproof.repository import get_order
+    from returnproof.evidence import verify_order_chain
+    from returnproof.repository import get_order, list_evidence
+    from returnproof.storage import build_storage
 
     order = get_order(db, user.org_id, order_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    evidence = list_evidence(db, user.org_id, order.id)
+    report = verify_order_chain(db, build_storage(request.app.state.settings), user.org_id, order.id)
+    flash = request.session.pop("flash", None)
+    flash_error = request.session.pop("flash_error", None)
     return render(
         request,
         "order_detail.html",
@@ -176,6 +182,11 @@ def order_detail_page(
             "settings": request.app.state.settings,
             "user": user,
             "order": order,
+            "evidence": evidence,
+            "chain": report,
+            "flash": flash,
+            "flash_error": flash_error,
+            "can_upload": user.role in {"owner", "ops"},
             "csrf": csrf_token(request),
         },
     )

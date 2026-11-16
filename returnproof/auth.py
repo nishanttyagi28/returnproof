@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -110,7 +111,7 @@ def require_user(user: User | None = Depends(get_current_user)) -> User:
     return user
 
 
-def require_roles(*allowed: Role) -> object:
+def require_roles(*allowed: Role) -> Callable[[User], User]:
     allowed_values = {role.value for role in allowed}
 
     def dependency(user: User = Depends(require_user)) -> User:
@@ -180,7 +181,7 @@ def authenticate_api_key(request: Request, db: Session = Depends(get_db)) -> Pri
     )
 
 
-def require_api_roles(*allowed: Role) -> object:
+def require_api_roles(*allowed: Role) -> Callable[[Principal], Principal]:
     allowed_values = {role.value for role in allowed}
 
     def dependency(principal: Principal = Depends(authenticate_api_key)) -> Principal:

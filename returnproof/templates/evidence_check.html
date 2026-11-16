@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Evidence check · {{ order.order_number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow"><a href="/app/orders/{{ order.id }}">{{ order.order_number }}</a> / Integrity</p>
+    <h1>Evidence tamper check</h1>
+    <p class="muted">Files and chain metadata are recomputed from disk and the database.</p>
+  </div>
+  <span class="pill {{ 'match' if report.valid else 'mismatch' }}">{{ "Valid" if report.valid else "Tampered" }}</span>
+</div>
+
+<section class="panel">
+  <dl class="facts">
+    <dt>Files checked</dt><dd>{{ report.evidence_count }}</dd>
+    <dt>Checked at</dt><dd>{{ report.checked_at | ist }}</dd>
+    <dt>Head hash</dt><dd><code class="hash">{{ report.head_hash or "genesis (no evidence)" }}</code></dd>
+    <dt>Result</dt><dd>{{ "All records match their hashes and links." if report.valid else "Integrity problems were found." }}</dd>
+  </dl>
+</section>
+
+{% if report.problems %}
+<section class="panel">
+  <h2>Problems</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Evidence</th><th>Code</th><th>Detail</th></tr></thead>
+      <tbody>
+      {% for problem in report.problems %}
+        <tr><td>{{ problem.evidence_id or "—" }}</td><td><code>{{ problem.code }}</code></td><td>{{ problem.message }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+<p><a class="button secondary" href="/app/orders/{{ order.id }}">Back to order</a></p>
+{% endblock %}

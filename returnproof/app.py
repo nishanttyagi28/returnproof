@@ -15,6 +15,7 @@ from returnproof.api.routes import router as api_router
 from returnproof.config import Settings, get_settings
 from returnproof.db import build_engine, build_session_factory
 from returnproof.web.auth_routes import router as app_router
+from returnproof.web.evidence_routes import router as evidence_router
 from returnproof.web.routes import router as web_router
 
 PACKAGE_DIR = __import__("pathlib").Path(__file__).resolve().parent
@@ -58,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.include_router(api_router)
     app.include_router(app_router)
+    app.include_router(evidence_router)
     app.include_router(web_router)
 
     @app.get("/healthz", tags=["system"], summary="Liveness probe")

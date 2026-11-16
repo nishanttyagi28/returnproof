@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./returnproof.db"
     base_url: str = "http://localhost:8000"
     upload_dir: Path = Path("var/evidence")
+    storage_backend: str = "local"
     max_upload_mb: int = 50
     session_cookie: str = "returnproof_session"
     session_max_age_seconds: int = 60 * 60 * 12

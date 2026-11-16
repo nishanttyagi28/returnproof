@@ -290,6 +290,7 @@ class Evidence(TimestampMixin, Base):
     chain_hash: Mapped[str] = mapped_column(String(64), unique=True)
     captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     uploaded_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    uploader_label: Mapped[str] = mapped_column(String(160), default="system")
     device_note: Mapped[str | None] = mapped_column(String(240))
     width: Mapped[int | None] = mapped_column(Integer)
     height: Mapped[int | None] = mapped_column(Integer)

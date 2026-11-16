@@ -10,6 +10,9 @@
   <span class="pill">{{ order.status | humanize }}</span>
 </div>
 
+{% if flash %}<div class="alert success" role="status">{{ flash }}</div>{% endif %}
+{% if flash_error %}<div class="alert error" role="alert">{{ flash_error }}</div>{% endif %}
+
 <section class="two-col">
   <div class="panel">
     <h2>Order</h2>
@@ -59,6 +62,83 @@
   </div>
 </section>
 
+<section class="panel" id="evidence">
+  <div class="panel-head">
+    <h2>Evidence vault</h2>
+    {% if chain.valid %}
+      <span class="pill match">Chain verified · {{ chain.evidence_count }} files</span>
+    {% else %}
+      <span class="pill mismatch">Chain problem · {{ chain.problems | length }} issue(s)</span>
+    {% endif %}
+  </div>
+  <p class="muted">Every upload is SHA-256 hashed and linked to the previous record for this order. Captured at upload time in UTC; shown in IST.</p>
+  {% if evidence %}
+    <div class="evidence-gallery">
+      {% for ev in evidence %}
+        <figure class="evidence-card">
+          {% if ev.kind == "photo" %}
+            <a href="/app/evidence/{{ ev.id }}/file" target="_blank" rel="noopener">
+              <img src="/app/evidence/{{ ev.id }}/file" alt="{{ ev.filename }}" loading="lazy">
+            </a>
+          {% elif ev.kind == "video" %}
+            <video controls preload="metadata" src="/app/evidence/{{ ev.id }}/file"></video>
+          {% else %}
+            <div class="doc-tile"><a href="/app/evidence/{{ ev.id }}/file" target="_blank" rel="noopener">Document</a></div>
+          {% endif %}
+          <figcaption>
+            <strong>{{ ev.filename }}</strong>
+            <span>{{ ev.stage | humanize }} · #{{ ev.chain_index }}</span>
+            <span>{{ ev.captured_at | ist }} · {{ ev.uploader_label }}</span>
+            {% if ev.device_note %}<span class="muted">{{ ev.device_note }}</span>{% endif %}
+            <code class="hash" title="SHA-256">{{ ev.sha256[:16] }}…</code>
+          </figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+    <p><a href="/app/orders/{{ order.id }}/evidence/check">Run tamper check</a> · head <code class="hash">{{ chain.head_hash[:16] if chain.head_hash else "genesis" }}…</code></p>
+  {% else %}
+    <p class="empty">No evidence captured for this order yet.</p>
+  {% endif %}
+
+  {% if can_upload %}
+  <form class="upload-form" method="post" action="/app/orders/{{ order.id }}/evidence" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h3>Add evidence</h3>
+    <div class="form-row">
+      <div>
+        <label for="stage">Stage</label>
+        <select id="stage" name="stage" required>
+          <option value="dispatch">Dispatch</option>
+          <option value="return_receipt">Return receipt</option>
+        </select>
+      </div>
+      <div>
+        <label for="kind">Kind</label>
+        <select id="kind" name="kind" required>
+          <option value="photo">Photo</option>
+          <option value="video">Video</option>
+          <option value="document">Document</option>
+        </select>
+      </div>
+      <div>
+        <label for="return_request_id">Return (for receipt)</label>
+        <select id="return_request_id" name="return_request_id">
+          <option value="">—</option>
+          {% for ret in order.returns %}
+            <option value="{{ ret.id }}">{{ ret.rma_number }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <label for="file">File</label>
+    <input id="file" name="file" type="file" required accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,application/pdf,text/csv,text/plain,application/json">
+    <label for="device_note">Device note</label>
+    <input id="device_note" name="device_note" maxlength="240" placeholder="e.g. iPhone 13 · warehouse bay 2">
+    <button class="button" type="submit">Upload to chain</button>
+  </form>
+  {% endif %}
+</section>
+
 <section class="panel">
   <h2>Returns &amp; verification</h2>
   {% if order.returns %}
@@ -86,7 +166,7 @@
       {% else %}
         <p class="muted">No identity verification recorded yet.</p>
       {% endif %}
-      <h4>Evidence ({{ ret.evidence | length }})</h4>
+      <h4>Return-receipt evidence ({{ ret.evidence | length }})</h4>
       {% if ret.evidence %}
         <ul class="evidence-list">
           {% for ev in ret.evidence %}
@@ -94,7 +174,7 @@
               <code class="hash">{{ ev.sha256[:16] }}…</code></li>
           {% endfor %}
         </ul>
-      {% else %}<p class="muted">Evidence capture arrives in the next milestone.</p>{% endif %}
+      {% else %}<p class="muted">No receipt evidence linked to this return yet.</p>{% endif %}
     </article>
     {% endfor %}
   {% else %}
