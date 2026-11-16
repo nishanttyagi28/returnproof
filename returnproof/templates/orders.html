@@ -18,6 +18,13 @@
       <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ value | humanize }}</option>
     {% endfor %}
   </select>
+  <label for="marketplace_filter">Marketplace</label>
+  <select id="marketplace_filter" name="marketplace_filter">
+    <option value="">All marketplaces</option>
+    {% for market in marketplaces %}
+      <option value="{{ market.id }}" {% if marketplace_filter == market.id|string %}selected{% endif %}>{{ market.name }}</option>
+    {% endfor %}
+  </select>
   <button class="button" type="submit">Filter</button>
   <a class="button secondary" href="/app/orders">Clear</a>
 </form>

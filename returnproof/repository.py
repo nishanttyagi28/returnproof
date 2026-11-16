@@ -88,11 +88,15 @@ def list_returns(
     org_id: int,
     *,
     status: str | None = None,
+    marketplace_id: int | None = None,
+    verification_status: str | None = None,
+    search: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[ReturnRequest]:
     stmt = (
         select(ReturnRequest)
+        .join(Order, Order.id == ReturnRequest.order_id)
         .where(ReturnRequest.org_id == org_id)
         .options(
             selectinload(ReturnRequest.order).selectinload(Order.marketplace),
@@ -102,6 +106,19 @@ def list_returns(
     )
     if status:
         stmt = stmt.where(ReturnRequest.status == status)
+    if marketplace_id:
+        stmt = stmt.where(Order.marketplace_id == marketplace_id)
+    if verification_status == "pending":
+        stmt = stmt.where(~ReturnRequest.verification.has())
+    elif verification_status:
+        stmt = stmt.where(ReturnRequest.verification.has(status=verification_status))
+    if search:
+        like = f"%{search.strip()}%"
+        stmt = stmt.where(
+            ReturnRequest.rma_number.ilike(like)
+            | Order.order_number.ilike(like)
+            | Order.customer_name.ilike(like)
+        )
     return list(db.scalars(stmt.limit(limit).offset(offset)).unique().all())
 
 
@@ -124,6 +141,32 @@ def list_evidence(db: Session, org_id: int, order_id: int) -> list[Evidence]:
             select(Evidence)
             .where(Evidence.org_id == org_id, Evidence.order_id == order_id)
             .order_by(Evidence.chain_index)
+        ).all()
+    )
+
+
+def get_claim_for_return(db: Session, org_id: int, return_id: int) -> Claim | None:
+    return db.scalar(
+        select(Claim)
+        .where(Claim.org_id == org_id, Claim.return_request_id == return_id)
+        .options(selectinload(Claim.marketplace), selectinload(Claim.return_request))
+        .order_by(Claim.id.desc())
+    )
+
+
+def claims_due_soon(db: Session, org_id: int, *, days: int = 7) -> list[Claim]:
+    now = datetime.now(UTC)
+    return list(
+        db.scalars(
+            select(Claim)
+            .where(
+                Claim.org_id == org_id,
+                Claim.status == ClaimStatus.FILED.value,
+                Claim.deadline_at.is_not(None),
+                Claim.deadline_at <= now + timedelta(days=days),
+            )
+            .options(selectinload(Claim.marketplace))
+            .order_by(Claim.deadline_at)
         ).all()
     )
 

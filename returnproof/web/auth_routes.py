@@ -107,10 +107,16 @@ def dashboard(
 ) -> Response:
     if user is None:
         return RedirectResponse("/login?next=/app", status_code=status.HTTP_303_SEE_OTHER)
-    from returnproof.repository import dashboard_metrics, get_organisation, list_returns
+    from returnproof.repository import (
+        claims_due_soon,
+        dashboard_metrics,
+        get_organisation,
+        list_returns,
+    )
 
     metrics = dashboard_metrics(db, user.org_id)
     recent = list_returns(db, user.org_id)[:6]
+    due_claims = claims_due_soon(db, user.org_id, days=7)
     return render(
         request,
         "dashboard.html",
@@ -120,6 +126,7 @@ def dashboard(
             "org": get_organisation(db, user.org_id),
             "metrics": metrics,
             "recent_returns": recent,
+            "due_claims": due_claims,
             "csrf": csrf_token(request),
         },
     )
@@ -132,12 +139,23 @@ def orders_page(
     user: Annotated[User | None, Depends(get_current_user)] = None,
     status_filter: str | None = None,
     q: str | None = None,
+    marketplace_filter: str | None = None,
 ) -> Response:
     if user is None:
         return RedirectResponse("/login?next=/app/orders", status_code=status.HTTP_303_SEE_OTHER)
     from returnproof.repository import list_marketplaces, list_orders
 
-    rows = list_orders(db, user.org_id, status=status_filter, search=q)
+    try:
+        marketplace_id = int(marketplace_filter) if marketplace_filter else None
+    except ValueError:
+        marketplace_id = None
+    rows = list_orders(
+        db,
+        user.org_id,
+        status=status_filter,
+        marketplace_id=marketplace_id,
+        search=q,
+    )
     return render(
         request,
         "orders.html",
@@ -148,6 +166,81 @@ def orders_page(
             "marketplaces": list_marketplaces(db),
             "status_filter": status_filter or "",
             "q": q or "",
+            "marketplace_filter": marketplace_filter or "",
+            "csrf": csrf_token(request),
+        },
+    )
+
+
+@router.get("/app/returns", response_class=HTMLResponse, include_in_schema=False)
+def returns_page(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User | None, Depends(get_current_user)] = None,
+    status_filter: str | None = None,
+    verification_filter: str | None = None,
+    marketplace_filter: str | None = None,
+    q: str | None = None,
+) -> Response:
+    if user is None:
+        return RedirectResponse("/login?next=/app/returns", status_code=status.HTTP_303_SEE_OTHER)
+    from returnproof.repository import list_marketplaces, list_returns
+
+    try:
+        marketplace_id = int(marketplace_filter) if marketplace_filter else None
+    except ValueError:
+        marketplace_id = None
+    rows = list_returns(
+        db,
+        user.org_id,
+        status=status_filter,
+        marketplace_id=marketplace_id,
+        verification_status=verification_filter,
+        search=q,
+    )
+    return render(
+        request,
+        "returns.html",
+        {
+            "settings": request.app.state.settings,
+            "user": user,
+            "returns": rows,
+            "marketplaces": list_marketplaces(db),
+            "status_filter": status_filter or "",
+            "verification_filter": verification_filter or "",
+            "marketplace_filter": marketplace_filter or "",
+            "q": q or "",
+            "csrf": csrf_token(request),
+        },
+    )
+
+
+@router.get("/app/returns/{return_id}", response_class=HTMLResponse, include_in_schema=False)
+def return_detail_page(
+    return_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User | None, Depends(get_current_user)] = None,
+) -> Response:
+    if user is None:
+        return RedirectResponse(
+            f"/login?next=/app/returns/{return_id}", status_code=status.HTTP_303_SEE_OTHER
+        )
+    from returnproof.repository import get_claim_for_return, get_return, list_evidence
+
+    record = get_return(db, user.org_id, return_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Return not found")
+    return render(
+        request,
+        "return_detail.html",
+        {
+            "settings": request.app.state.settings,
+            "user": user,
+            "return_request": record,
+            "order": record.order,
+            "evidence": list_evidence(db, user.org_id, record.order_id),
+            "claim": get_claim_for_return(db, user.org_id, record.id),
             "csrf": csrf_token(request),
         },
     )

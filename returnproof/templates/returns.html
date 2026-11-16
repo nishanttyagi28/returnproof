@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Returns · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Warehouse</p>
+    <h1>Return requests</h1>
+    <p class="muted">Every buyer return with its identity-verification outcome.</p>
+  </div>
+  <a class="button secondary" href="/app/orders">Orders</a>
+</div>
+<form class="filters" method="get" action="/app/returns" role="search">
+  <label for="q">Search</label>
+  <input id="q" name="q" value="{{ q }}" placeholder="RMA, order or customer">
+  <label for="status_filter">Return status</label>
+  <select id="status_filter" name="status_filter">
+    <option value="">All statuses</option>
+    {% for value in ["requested", "in_transit", "received", "verified", "closed", "rejected", "not_returned"] %}
+      <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ value | humanize }}</option>
+    {% endfor %}
+  </select>
+  <label for="verification_filter">Verification</label>
+  <select id="verification_filter" name="verification_filter">
+    <option value="">Any</option>
+    <option value="pending" {% if verification_filter == "pending" %}selected{% endif %}>Pending</option>
+    {% for value in ["match", "mismatch", "needs_review"] %}
+      <option value="{{ value }}" {% if verification_filter == value %}selected{% endif %}>{{ value | humanize }}</option>
+    {% endfor %}
+  </select>
+  <label for="marketplace_filter">Marketplace</label>
+  <select id="marketplace_filter" name="marketplace_filter">
+    <option value="">All</option>
+    {% for market in marketplaces %}
+      <option value="{{ market.id }}" {% if marketplace_filter == market.id|string %}selected{% endif %}>{{ market.name }}</option>
+    {% endfor %}
+  </select>
+  <button class="button" type="submit">Filter</button>
+  <a class="button secondary" href="/app/returns">Clear</a>
+</form>
+
+{% if returns %}
+<div class="table-wrap panel">
+  <table>
+    <thead><tr><th>RMA</th><th>Order</th><th>Marketplace</th><th>Reason</th><th>Status</th><th>Verification</th><th>Refund</th><th>Received</th></tr></thead>
+    <tbody>
+    {% for item in returns %}
+      <tr>
+        <td><a href="/app/returns/{{ item.id }}">{{ item.rma_number }}</a></td>
+        <td><a href="/app/orders/{{ item.order_id }}">{{ item.order.order_number }}</a></td>
+        <td>{{ item.order.marketplace.name }}</td>
+        <td>{{ item.reason_text or item.reason_code }}</td>
+        <td><span class="pill">{{ item.status | humanize }}</span></td>
+        <td>
+          {% if item.verification %}
+            <span class="pill {{ item.verification.status }}">{{ item.verification.status | humanize }}</span>
+          {% else %}<span class="muted">Pending</span>{% endif %}
+        </td>
+        <td>{{ item.refund_amount_paise | inr }}</td>
+        <td>{{ item.received_at | date_ist }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty panel">No returns match these filters.</p>
+{% endif %}
+{% endblock %}

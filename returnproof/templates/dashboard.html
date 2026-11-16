@@ -35,10 +35,34 @@
   </article>
 </section>
 
+{% if due_claims %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Claims nearing deadline</h2>
+    <a href="/app/claims">All claims</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Reference</th><th>Marketplace</th><th>Claimed</th><th>Deadline</th></tr></thead>
+      <tbody>
+      {% for claim in due_claims %}
+        <tr>
+          <td><a href="/app/claims/{{ claim.id }}">{{ claim.reference }}</a></td>
+          <td>{{ claim.marketplace.name }}</td>
+          <td>{{ claim.amount_claimed_paise | inr }}</td>
+          <td>{{ claim.deadline_at | ist }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 <section class="panel">
   <div class="panel-head">
     <h2>Recent returns</h2>
-    <a href="/app/orders">All orders</a>
+    <a href="/app/returns">All returns</a>
   </div>
   {% if recent_returns %}
   <div class="table-wrap">
@@ -47,7 +71,7 @@
       <tbody>
       {% for item in recent_returns %}
         <tr>
-          <td><a href="/app/orders/{{ item.order_id }}">{{ item.rma_number }}</a></td>
+          <td><a href="/app/returns/{{ item.id }}">{{ item.rma_number }}</a></td>
           <td>{{ item.order.order_number }}</td>
           <td>{{ item.order.marketplace.name }}</td>
           <td><span class="pill">{{ item.status | humanize }}</span></td>

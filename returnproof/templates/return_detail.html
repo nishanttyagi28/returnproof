@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ return_request.rma_number }} · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow"><a href="/app/returns">Returns</a> / {{ order.marketplace.name }}</p>
+    <h1>{{ return_request.rma_number }}</h1>
+    <p class="muted">Order <a href="/app/orders/{{ order.id }}">{{ order.order_number }}</a> · {{ order.customer_name }}</p>
+  </div>
+  <span class="pill">{{ return_request.status | humanize }}</span>
+</div>
+
+<section class="two-col">
+  <div class="panel">
+    <h2>Return</h2>
+    <dl class="facts">
+      <dt>Requested</dt><dd>{{ return_request.requested_at | ist }}</dd>
+      <dt>Received</dt><dd>{{ return_request.received_at | ist }}</dd>
+      <dt>Reason</dt><dd>{{ return_request.reason_text or return_request.reason_code }}</dd>
+      <dt>Buyer comment</dt><dd>{{ return_request.buyer_comment or "—" }}</dd>
+      <dt>Refund</dt><dd>{{ return_request.refund_amount_paise | inr }}</dd>
+      <dt>Reverse shipping</dt><dd>{{ return_request.reverse_shipping_paise | inr }}</dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <h2>Verification</h2>
+    {% if return_request.verification %}
+      <div class="verdict {{ return_request.verification.status }}">
+        <strong>{{ return_request.verification.status | humanize }}</strong>
+        <span>score {{ "%.2f"|format(return_request.verification.score) }}</span>
+        {% if return_request.verification.image_distance is not none %}<span>visual distance {{ return_request.verification.image_distance }}</span>{% endif %}
+        <ul>{% for reason in return_request.verification.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+      </div>
+    {% else %}
+      <p class="muted">No verification recorded. Run one from the order page.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Evidence ({{ evidence | length }})</h2>
+    <a href="/app/orders/{{ order.id }}#evidence">Add or inspect in order</a>
+  </div>
+  {% if evidence %}
+  <div class="evidence-gallery">
+    {% for ev in evidence %}
+      <figure class="evidence-card">
+        {% if ev.kind == "photo" %}
+          <a href="/app/evidence/{{ ev.id }}/file" target="_blank" rel="noopener"><img src="/app/evidence/{{ ev.id }}/file" alt="{{ ev.filename }}" loading="lazy"></a>
+        {% elif ev.kind == "video" %}
+          <video controls preload="metadata" src="/app/evidence/{{ ev.id }}/file"></video>
+        {% else %}
+          <div class="doc-tile"><a href="/app/evidence/{{ ev.id }}/file" target="_blank" rel="noopener">Document</a></div>
+        {% endif %}
+        <figcaption>
+          <strong>{{ ev.filename }}</strong>
+          <span>{{ ev.stage | humanize }} · #{{ ev.chain_index }}</span>
+          <span>{{ ev.captured_at | ist }} · {{ ev.uploader_label }}</span>
+        </figcaption>
+      </figure>
+    {% endfor %}
+  </div>
+  {% else %}<p class="empty">No evidence captured for this order yet.</p>{% endif %}
+</section>
+
+<section class="panel">
+  <h2>Claim</h2>
+  {% if claim %}
+    <p><a href="/app/claims/{{ claim.id }}">{{ claim.reference }}</a> · <span class="pill {{ claim.status }}">{{ claim.status | humanize }}</span> · claimed {{ claim.amount_claimed_paise | inr }}</p>
+    <p><a class="button secondary" href="/app/claims/{{ claim.id }}/pack?format=html" target="_blank" rel="noopener">Preview pack</a></p>
+  {% elif return_request.verification and return_request.verification.status in ["mismatch", "needs_review"] %}
+    <p class="muted">This return is eligible for a claim pack. Use the order page to build one.</p>
+    <a class="button" href="/app/orders/{{ order.id }}#returns">Build claim pack</a>
+  {% else %}
+    <p class="muted">No claim yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Timeline</h2>
+  <ol class="timeline">
+    <li><strong>Order placed</strong><span>{{ order.placed_at | ist }}</span></li>
+    {% if order.dispatched_at %}<li><strong>Dispatched</strong><span>{{ order.dispatched_at | ist }}</span></li>{% endif %}
+    {% if order.delivered_at %}<li><strong>Delivered</strong><span>{{ order.delivered_at | ist }}</span></li>{% endif %}
+    <li><strong>Return requested</strong><span>{{ return_request.requested_at | ist }}</span></li>
+    {% if return_request.received_at %}<li><strong>Return received</strong><span>{{ return_request.received_at | ist }}</span></li>{% endif %}
+    {% if return_request.verification %}<li><strong>Verification {{ return_request.verification.status | humanize }}</strong><span>{{ return_request.verification.created_at | ist }}</span></li>{% endif %}
+    {% if claim and claim.filed_at %}<li><strong>Claim filed</strong><span>{{ claim.filed_at | ist }}</span></li>{% endif %}
+  </ol>
+</section>
+{% endblock %}
