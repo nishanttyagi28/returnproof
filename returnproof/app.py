@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from returnproof import __version__
 from returnproof.config import Settings, get_settings
+from returnproof.db import build_engine, build_session_factory
 from returnproof.web.routes import router as web_router
 
 PACKAGE_DIR = __import__("pathlib").Path(__file__).resolve().parent
@@ -24,6 +25,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.settings = app_settings
         yield
+        app.state.engine.dispose()
 
     app = FastAPI(
         title=app_settings.app_name,
@@ -39,6 +41,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ],
     )
     app.state.settings = app_settings
+    engine = build_engine(app_settings.database_url, echo=app_settings.debug)
+    app.state.engine = engine
+    app.state.session_factory = build_session_factory(engine)
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
     app.include_router(web_router)
 

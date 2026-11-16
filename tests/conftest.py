@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from returnproof.app import create_app
 from returnproof.config import Settings
+from returnproof.db import create_schema
 
 
 @pytest.fixture
@@ -22,5 +23,6 @@ def settings(tmp_path: Path) -> Settings:
 @pytest.fixture
 def client(settings: Settings) -> Iterator[TestClient]:
     app = create_app(settings)
+    create_schema(app.state.engine)
     with TestClient(app) as test_client:
         yield test_client
