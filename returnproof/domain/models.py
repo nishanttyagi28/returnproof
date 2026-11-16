@@ -375,6 +375,7 @@ class Settlement(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(24), default="imported")
     is_sample: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    marketplace: Mapped[Marketplace] = relationship()
     lines: Mapped[list[SettlementLine]] = relationship(
         back_populates="settlement", cascade="all, delete-orphan"
     )

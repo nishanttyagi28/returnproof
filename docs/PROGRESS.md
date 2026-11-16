@@ -10,8 +10,8 @@ and `pytest` pass locally.
 | R-003 | Auth, sessions, roles, org isolation, API keys | pending | — | — |
 | R-004 | Evidence vault + hash chain + tamper check | done | ccbc42a | 21 |
 | R-005 | Product identity verification | done | 3408856 | 30 |
-| R-006 | Claim/dispute pack builder | done | _pending_ | 38 |
-| R-007 | Settlement import + recovery ledger | pending | — | — |
+| R-006 | Claim/dispute pack builder | done | 5b1fa93 | 38 |
+| R-007 | Settlement import + recovery ledger | done | _pending_ | 44 |
 | R-008 | Web UI | pending | — | — |
 | R-009 | Ops: audit, export, jobs, limits, logging | pending | — | — |
 | R-010 | Docs, demo, coverage gate | pending | — | — |

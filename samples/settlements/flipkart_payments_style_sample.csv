@@ -1,0 +1,3 @@
+Order ID,Transaction Type,Seller SKU,Units,Product Sales,Commission,Delivery Fee,Return Shipping,Customer Refund,Other Fees,Net Amount
+SAMPLE-FK-3001,order_payment,NR-WCH-007,1,4499.00,539.88,72.00,0.00,0.00,0.00,3887.12
+SAMPLE-FK-3002,refund,NR-WCH-007,1,0.00,0.00,0.00,89.00,4499.00,0.00,-4588.00

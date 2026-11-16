@@ -23,6 +23,7 @@ from returnproof.domain.models import (
     Organisation,
     RecoveryEntry,
     ReturnRequest,
+    Settlement,
     Shipment,
     User,
     VerificationResult,
@@ -157,6 +158,8 @@ def list_recoveries(
     org_id: int,
     *,
     direction: str | None = None,
+    status: str | None = None,
+    category: str | None = None,
     limit: int = 100,
 ) -> list[RecoveryEntry]:
     stmt = (
@@ -166,7 +169,45 @@ def list_recoveries(
     )
     if direction:
         stmt = stmt.where(RecoveryEntry.direction == direction)
+    if status:
+        stmt = stmt.where(RecoveryEntry.status == status)
+    if category:
+        stmt = stmt.where(RecoveryEntry.category == category)
     return list(db.scalars(stmt.limit(limit)).all())
+
+
+def list_settlements(db: Session, org_id: int) -> list[Settlement]:
+    return list(
+        db.scalars(
+            select(Settlement)
+            .where(Settlement.org_id == org_id)
+            .options(selectinload(Settlement.marketplace))
+            .order_by(Settlement.imported_at.desc())
+        ).all()
+    )
+
+
+def get_settlement(db: Session, org_id: int, settlement_id: int) -> Settlement | None:
+    return db.scalar(
+        select(Settlement)
+        .where(Settlement.id == settlement_id, Settlement.org_id == org_id)
+        .options(
+            selectinload(Settlement.marketplace),
+            selectinload(Settlement.lines),
+        )
+    )
+
+
+def list_settlement_lines(db: Session, settlement_id: int) -> list[object]:
+    from returnproof.domain.models import SettlementLine
+
+    return list(
+        db.scalars(
+            select(SettlementLine)
+            .where(SettlementLine.settlement_id == settlement_id)
+            .order_by(SettlementLine.id)
+        ).all()
+    )
 
 
 def list_marketplaces(db: Session) -> list[Marketplace]:

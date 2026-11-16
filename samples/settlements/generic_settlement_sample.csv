@@ -1,0 +1,7 @@
+order_number,transaction_type,marketplace_sku,quantity,gross_inr,commission_inr,shipping_inr,reverse_shipping_inr,refund_inr,other_fee_inr,net_inr,claim_payout_inr
+SAMPLE-AMZ-1001,sale,NR-AUD-001,1,1499.00,179.88,72.00,0.00,0.00,0.00,1247.12,0.00
+SAMPLE-AMZ-1002,refund,NR-PHN-014,1,0.00,0.00,0.00,0.00,13499.00,0.00,-13499.00,0.00
+SAMPLE-AMZ-1003,sale,NR-KTN-221,1,1899.00,227.88,72.00,89.00,0.00,0.00,1510.12,0.00
+SAMPLE-AMZ-1004,sale,NR-HOM-045,1,899.00,250.00,72.00,0.00,0.00,0.00,577.00,0.00
+SAMPLE-AMZ-1005,sale,NR-SPK-033,1,3999.00,480.00,0.00,0.00,0.00,0.00,3319.00,0.00
+SAMPLE-AMZ-1005,claim_payout,NR-SPK-033,1,3999.00,0.00,0.00,0.00,0.00,0.00,3999.00,3999.00

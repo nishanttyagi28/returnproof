@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ settlement.file_name }} · ReturnProof{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow"><a href="/app/settlements">Settlements</a> / {{ settlement.marketplace.name }}</p>
+    <h1>{{ settlement.file_name }}</h1>
+    <p class="muted">SHA-256 {{ settlement.file_sha256[:24] }}… · imported {{ settlement.imported_at | ist }}</p>
+  </div>
+  <span class="pill">{{ settlement.status | humanize }}</span>
+</div>
+<section class="panel">
+  <dl class="facts">
+    <dt>Rows</dt><dd>{{ settlement.row_count }}</dd>
+    <dt>Period</dt><dd>{{ settlement.period_start | date_ist }} – {{ settlement.period_end | date_ist }}</dd>
+    <dt>Net total</dt><dd>{{ settlement.total_net_paise | inr }}</dd>
+  </dl>
+</section>
+<section class="panel">
+  <h2>Settlement lines</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Order</th><th>Type</th><th>SKU</th><th>Gross</th><th>Commission</th><th>Shipping</th><th>Reverse</th><th>Refund</th><th>Other</th><th>Net</th></tr></thead>
+      <tbody>
+      {% for line in settlement.lines %}
+        <tr>
+          <td>{{ line.order_number }}</td>
+          <td>{{ line.transaction_type | humanize }}</td>
+          <td>{{ line.marketplace_sku or "—" }}</td>
+          <td>{{ line.gross_paise | inr }}</td>
+          <td>{{ line.commission_paise | inr }}</td>
+          <td>{{ line.shipping_paise | inr }}</td>
+          <td>{{ line.reverse_shipping_paise | inr }}</td>
+          <td>{{ line.refund_paise | inr }}</td>
+          <td>{{ line.other_fee_paise | inr }}</td>
+          <td>{{ line.net_paise | inr }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

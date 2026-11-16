@@ -659,18 +659,14 @@ def resolve_claim(
             order_id=claim.order_id,
             return_request_id=claim.return_request_id,
             marketplace_id=claim.marketplace_id,
-            direction=(
-                RecoveryDirection.RECOVERED.value
-                if approved > 0
-                else RecoveryDirection.AT_RISK.value
-            ),
-            status=(
-                RecoveryStatus.RECOVERED.value if approved > 0 else RecoveryStatus.OPEN.value
-            ),
-            category="claim_payout",
+            direction=RecoveryDirection.AT_RISK.value,
+            status=RecoveryStatus.OPEN.value,
+            category="approved_not_paid",
             amount_paise=approved,
-            recovered_at=claim.resolved_at if approved > 0 else None,
-            description=f"Claim {claim.reference} resolved as {status}",
+            recovered_at=None,
+            description=(
+                f"Claim {claim.reference} resolved as {status}; payout not yet reconciled"
+            ),
             is_sample=claim.is_sample,
         )
     )

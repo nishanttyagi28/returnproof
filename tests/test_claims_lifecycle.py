@@ -67,7 +67,8 @@ def test_claim_lifecycle_deadline_amounts_and_recovery_entry(client: TestClient)
         entries = db.query(RecoveryEntry).filter_by(claim_id=claim_id).all()
         assert len(entries) == 1
         assert entries[0].amount_paise == 100000
-        assert entries[0].category == "claim_payout"
+        assert entries[0].category == "approved_not_paid"
+        assert entries[0].direction == "at_risk"
         claim = db.get(Claim, claim_id)
         assert claim is not None
         assert claim.resolved_at is not None

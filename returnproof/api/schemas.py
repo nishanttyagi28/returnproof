@@ -183,6 +183,87 @@ class ClaimTemplateOut(BaseModel):
     sections: list[str]
 
 
+class SettlementLineOut(ApiModel):
+    id: int
+    order_number: str
+    transaction_type: str
+    marketplace_sku: str | None
+    quantity: int
+    gross_paise: int
+    commission_paise: int
+    shipping_paise: int
+    reverse_shipping_paise: int
+    refund_paise: int
+    other_fee_paise: int
+    net_paise: int
+
+
+class SettlementOut(ApiModel):
+    id: int
+    marketplace_id: int
+    file_name: str
+    file_sha256: str
+    period_start: datetime | None
+    period_end: datetime | None
+    imported_at: datetime
+    row_count: int
+    total_net_paise: int
+    status: str
+
+
+class SettlementDetailOut(SettlementOut):
+    lines: list[SettlementLineOut]
+
+
+class SettlementImportOut(BaseModel):
+    settlement: SettlementOut
+    rows: int
+    issues: list[str]
+    entries_created: int
+    entries_recovered: int
+    detected_paise: int
+
+
+class ReconciliationOut(BaseModel):
+    settlement_id: int | None
+    lines_checked: int
+    entries_created: int
+    entries_recovered: int
+    detected_paise: int
+    by_category: dict[str, int]
+
+
+class RecoveryEntryOut(ApiModel):
+    id: int
+    claim_id: int | None
+    order_id: int | None
+    return_request_id: int | None
+    marketplace_id: int | None
+    direction: str
+    status: str
+    category: str
+    amount_paise: int
+    detected_at: datetime
+    recovered_at: datetime | None
+    description: str
+
+
+class RecoverySummaryRowOut(BaseModel):
+    marketplace_id: int | None
+    marketplace: str
+    month: str
+    at_risk_paise: int
+    recovered_paise: int
+    open_entries: int
+    recovered_entries: int
+
+
+class RecoverySummaryOut(BaseModel):
+    rows: list[RecoverySummaryRowOut]
+    total_at_risk_paise: int
+    total_recovered_paise: int
+
+
 class ApiKeyCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
 

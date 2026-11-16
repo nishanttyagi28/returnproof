@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     phash_threshold: int = 8
     weight_tolerance_grams: int = 25
     weight_tolerance_percent: float = 5.0
+    settlement_tolerance_paise: int = 100
+    default_commission_percent: float = 12.0
     claim_window_default_days: int = 15
     rate_limit_auth_per_minute: int = 10
     demo_mode: bool = Field(default=False, description="Show demo banner and sample-data hints.")
